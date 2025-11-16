@@ -35,7 +35,7 @@ install(
 install(
 	FILES pam
 	RENAME mdm
-	DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/pam.d
+	DESTINATION /etc/pam.d
 )
 install(
 	FILES ${CMAKE_CURRENT_BINARY_DIR}/mdmrc
