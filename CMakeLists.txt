@@ -28,3 +28,4 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(mdm)
 add_subdirectory(milkwm)
+add_subdirectory(mpanel)
