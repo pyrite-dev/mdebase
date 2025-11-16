@@ -4,6 +4,7 @@
 
 void login_window(void){
 	MwWidget window, pic, userlabel, usercombo, passlabel, passentry, mainsep, sesslabel, sesscombo, fieldsep, shutdown, reboot, ok;
+	MwLLPixmap p;
 
 	MwLibraryInit();
 	
@@ -11,6 +12,7 @@ void login_window(void){
 		MwNhasBorder, 1,
 		MwNinverted, 0,
 	NULL);
+	p = config_picture == NULL ? NULL : MwLoadImage(window, config_picture);
 	pic = MwVaCreateWidget(MwImageClass, "image", window, 10, 10, 80, 137,
 		MwNhasBorder, 1,
 	NULL);
@@ -43,6 +45,8 @@ void login_window(void){
 	ok = MwVaCreateWidget(MwButtonClass, "ok", window, 366 - 10 - 60, 10+137+10, 60, 18,
 		MwNtext, "OK",
 	NULL);
+
+	if(p != NULL) MwVaApply(pic, MwNpixmap, p, NULL);
 
 	MwLoop(window);
 }

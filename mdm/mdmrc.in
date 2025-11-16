@@ -1,2 +1,2 @@
-[MDM Entry]
+[MDM Config]
 Picture=@CMAKE_INSTALL_FULL_DATAROOTDIR@/mdm/mdm.png

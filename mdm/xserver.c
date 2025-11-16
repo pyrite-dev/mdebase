@@ -2,15 +2,6 @@
 
 #include <X11/Xlib.h>
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <errno.h>
-#include <signal.h>
-#include <setjmp.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 static pid_t x_server;
 static int got_usr1;
 static Display* display;
