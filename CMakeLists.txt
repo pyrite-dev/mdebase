@@ -5,3 +5,5 @@ project(
 
 add_subdirectory(mdm)
 add_subdirectory(milkwm)
+
+configure_file(include/config.h.in config.h)
