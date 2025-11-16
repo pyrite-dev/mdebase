@@ -21,7 +21,7 @@ PKGCONF_ADD(mdm inih)
 target_link_libraries(
 	mdm
 	PRIVATE
-	MDELib Mw
+	pam MDELib Mw
 )
 
 

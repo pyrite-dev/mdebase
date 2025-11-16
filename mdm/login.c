@@ -2,6 +2,10 @@
 
 #include <Mw/Milsko.h>
 
+static void add_user(const char* name, void* user){
+	MwComboBoxAdd(user, -1, name);
+}
+
 void login_window(void){
 	MwWidget window, pic, userlabel, usercombo, passlabel, passentry, mainsep, sesslabel, sesscombo, fieldsep, shutdown, reboot, ok;
 	MwLLPixmap p;
@@ -47,6 +51,8 @@ void login_window(void){
 	NULL);
 
 	if(p != NULL) MwVaApply(pic, MwNpixmap, p, NULL);
+
+	MDEListUsers(add_user, usercombo);
 
 	MwLoop(window);
 }
