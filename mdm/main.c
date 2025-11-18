@@ -37,6 +37,7 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
+	if(access(CONFDIR, F_OK) != 0) mkdir(CONFDIR, 0755);
 	if(access(CONFDIR "/mdm", F_OK) != 0) mkdir(CONFDIR "/mdm", 0755);
 	if(access(CONFDIR "/mdm/mdmrc", F_OK) != 0) MDEFileCopy(DATADIR "/examples/mdm/mdmrc", CONFDIR "/mdm/mdmrc");
 
