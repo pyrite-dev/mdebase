@@ -180,6 +180,7 @@ void login_window(void) {
 	sh_new_strdup(sessions);
 	shdefault(sessions, NULL);
 	MDEDirectoryScan(DATADIR "/xsessions", add_session, sesscombo);
+	MDEDirectoryScan("/usr/share/xsessions", add_session, sesscombo);
 
 	pthread_mutex_unlock(&xmutex);
 
