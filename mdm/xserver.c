@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #define _MILSKO
 #define USE_X11
 #include "mdm.h"
@@ -21,8 +22,6 @@ int launch_x(void) {
 	got_usr1 = 0;
 
 	signal(SIGUSR1, catch_usr1);
-
-	/* TODO: Remove hardcoded DISPLAY */
 
 	if((xserver = fork()) == 0) {
 		signal(SIGUSR1, SIG_IGN);

@@ -22,10 +22,25 @@
 #include <setjmp.h>
 #include <pthread.h>
 
+/* login.c */
+extern MwWidget root;
+typedef enum session_type {
+	MDM_SESSION_TYPE_X,
+	MDM_SESSION_TYPE_WAYLAND,
+} session_type_t;
+typedef struct session_environment {
+	char*	       run;
+	char*	       try_run;
+	session_type_t session_type;
+	char*	       desktop_names;
+} session_environment_t;
+
+void login_window(void);
+
 /* main.c */
-extern gid_t gid;
-extern uid_t uid;
-extern char* run;
+extern gid_t		      gid;
+extern uid_t		      uid;
+extern session_environment_t* env;
 
 /* xserver.c */
 extern pthread_t       xthread;
@@ -38,11 +53,6 @@ int  x_height(void);
 int  init_x(void);
 void loop_x(void);
 void kill_x(void);
-
-/* login.c */
-extern MwWidget root;
-
-void login_window(void);
 
 /* config.c */
 extern char* config_picture;
