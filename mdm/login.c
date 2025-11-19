@@ -1,12 +1,8 @@
 #include "mdm.h"
 
 #include <ini.h>
-#include <sched.h>
-#include <security/_pam_types.h>
 #include <security/pam_appl.h>
 #include <stb_ds.h>
-#include <stdlib.h>
-#include <string.h>
 
 MwWidget root;
 MwWidget window, sesscombo, usercombo, passentry, error;
@@ -144,14 +140,7 @@ static void try_login(MwWidget handle, void* user, void* client) {
 		place = "Error calling pam_acct_mgmt";
 		goto cleanup;
 	}
-
-	ret = pam_open_session(pam, 0);
-	if(ret != PAM_SUCCESS) {
-		place = "Error calling pam_open_session";
-		goto cleanup;
-	}
 cleanup:
-	pam_close_session(pam, 0);
 
 	// if pam_end fails but we have another error, we care more about the error at hand
 	// then whether pam successfully ended.
@@ -200,7 +189,7 @@ void login_window(void) {
 
 	root = MwCreateWidget(NULL, "root", NULL, 0, 0, 0, 0);
 
-	window	  = MwVaCreateWidget(MwWindowClass, "login", root, (x_width() - 366) / 2, (x_height() - 200) / 2, 366, 250,
+	window	  = MwVaCreateWidget(MwWindowClass, "login", root, (x_width() - 366) / 2, (x_height() - (183+32+5)) / 2, 366, 183+32+5,
 				     MwNtitle, "login",
 				     NULL);
 	p	  = config_picture == NULL ? NULL : MwLoadImage(window, config_picture);
@@ -236,7 +225,7 @@ void login_window(void) {
 	ok	  = MwVaCreateWidget(MwButtonClass, "ok", window, 366 - 10 - 60, 10 + 137 + 10, 60, 18,
 				     MwNtext, "OK",
 				     NULL);
-	error	  = MwVaCreateWidget(MwLabelClass, "error", window, 10, 10 + 137 + 10 + 20, 366, 48, NULL);
+	error	  = MwVaCreateWidget(MwLabelClass, "error", window, 10, 10 + 137 + 10 + 20, 366, 32, NULL);
 	if(p != NULL) MwVaApply(pic, MwNpixmap, p, NULL);
 
 	MwAddUserHandler(ok, MwNactivateHandler, try_login, NULL);

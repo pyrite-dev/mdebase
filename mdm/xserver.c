@@ -3,7 +3,7 @@
 #define USE_X11
 #include "mdm.h"
 
-#include "stb_ds.h"
+#include <stb_ds.h>
 
 static pid_t xserver;
 static int   got_usr1;

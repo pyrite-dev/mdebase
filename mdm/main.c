@@ -1,8 +1,4 @@
 #include "mdm.h"
-#include <sched.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 int is_launch_x = 1;
 int is_daemon	= 1;
