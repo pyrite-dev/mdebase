@@ -71,7 +71,7 @@ static void add_session(session_type_t session_type, const char* path, int dir, 
 	}
 
 	if(name_line != NULL) free(name_line);
-	if(desktop_names_line != NULL) free(desktop_names_line);
+	if(m && desktop_names_line != NULL) free(desktop_names_line);
 	if(m && try_exec_line != NULL) free(try_exec_line);
 	if(m && exec_line != NULL) free(exec_line);
 }
@@ -234,6 +234,7 @@ void login_window(void) {
 	MDEUsersList(add_user, usercombo);
 
 	for(i = 0; i < shlen(sessions); i++) {
+		if(sessions[i].value->desktop_names != NULL) free(sessions[i].value->desktop_names);
 		free(sessions[i].value);
 	}
 	shfree(sessions);
