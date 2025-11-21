@@ -5,7 +5,7 @@
 #include <stb_ds.h>
 
 MwWidget root;
-MwWidget window, sesscombo, usercombo, passentry, error;
+MwWidget window, sesscombo, usercombo, passentry, reason;
 
 typedef struct session {
 	char*		       key;
@@ -163,7 +163,8 @@ cleanup:
 				n	   = 0;
 			}
 		}
-		MwSetText(error, MwNtext, err_str);
+
+		MwSetText(reason, MwNtext, "Login failed");
 	} else {
 		printf("Logging in as %s\n", username);
 		struct passwd* pwd     = getpwnam(username);
@@ -189,7 +190,11 @@ void login_window(void) {
 
 	root = MwCreateWidget(NULL, "root", NULL, 0, 0, 0, 0);
 
+<<<<<<< HEAD
 	window	  = MwVaCreateWidget(MwWindowClass, "login", root, (x_width() - 366) / 2, (x_height() - (183 + 32 + 5)) / 2, 366, 183 + 32 + 5,
+=======
+	window	  = MwVaCreateWidget(MwWindowClass, "login", root, (x_width() - 366) / 2, (x_height() - 183) / 2, 366, 183,
+>>>>>>> 5ae06b1 (fix)
 				     MwNtitle, "login",
 				     NULL);
 	p	  = config_picture == NULL ? NULL : MwLoadImage(window, config_picture);
@@ -225,7 +230,7 @@ void login_window(void) {
 	ok	  = MwVaCreateWidget(MwButtonClass, "ok", window, 366 - 10 - 60, 10 + 137 + 10, 60, 18,
 				     MwNtext, "OK",
 				     NULL);
-	error	  = MwVaCreateWidget(MwLabelClass, "error", window, 10, 10 + 137 + 10 + 20, 366, 32, NULL);
+	reason	  = MwCreateWidget(MwLabelClass, "ok", window, 10 + 80 + 5 + 70 + 5, 10 + 137 + 10, 366 - 10 - 80 - 5 - 70 - 5 - 60 - 10 - 5, 18);
 	if(p != NULL) MwVaApply(pic, MwNpixmap, p, NULL);
 
 	MwAddUserHandler(ok, MwNactivateHandler, try_login, NULL);
