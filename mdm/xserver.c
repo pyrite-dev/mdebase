@@ -133,7 +133,8 @@ void loop_x(void) {
 						    MwNinverted, 0,
 						    NULL);
 
-			XSelectInput(xdisplay, w.client, StructureNotifyMask);
+			XGetWindowAttributes(xdisplay, w.client, &xwa);
+			XSelectInput(xdisplay, w.client, xwa.your_event_mask | StructureNotifyMask);
 
 			arrput(frames, w);
 			pthread_mutex_unlock(&xmutex);
@@ -146,7 +147,7 @@ void loop_x(void) {
 				if(frames[i].client == ev.xunmap.window) {
 					MwDestroyWidget(frames[i].frame);
 					arrdel(frames, i);
-					c = 1;
+					if(i == 0) c = 1;
 					break;
 				}
 			}
