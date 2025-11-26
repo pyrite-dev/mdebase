@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
 
 	if(access(CONFDIR, F_OK) != 0) mkdir(CONFDIR, 0755);
 	if(access(CONFDIR "/mdm", F_OK) != 0) mkdir(CONFDIR "/mdm", 0755);
-	if(access(CONFDIR "/mdm/mdmrc", F_OK) != 0) MDEFileCopy(DATADIR "/examples/mdm/mdmrc", CONFDIR "/mdm/mdmrc");
+	if(access(CONFDIR "/mdm/mdmrc", F_OK) != 0) MDEFileCopy(DATAROOTDIR "/examples/mdm/mdmrc", CONFDIR "/mdm/mdmrc");
 
 	parse_config();
 

@@ -241,9 +241,9 @@ void login_window(void) {
 	shfree(sessions);
 	sh_new_strdup(sessions);
 	shdefault(sessions, NULL);
-	MDEDirectoryScan(DATADIR "/xsessions", add_session_x, sesscombo);
+	MDEDirectoryScan(DATAROOTDIR "/xsessions", add_session_x, sesscombo);
 	MDEDirectoryScan("/usr/share/xsessions", add_session_x, sesscombo);
-	MDEDirectoryScan(DATADIR "/wayland-sessions", add_session_wayland, sesscombo);
+	MDEDirectoryScan(DATAROOTDIR "/wayland-sessions", add_session_wayland, sesscombo);
 	MDEDirectoryScan("/usr/share/wayland-sessions", add_session_wayland, sesscombo);
 
 	pthread_mutex_unlock(&xmutex);
