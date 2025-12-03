@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #define _MILSKO
 #define USE_X11
 #include "mdm.h"
@@ -53,6 +52,7 @@ static int wm_detect(Display* disp, XErrorEvent* ev) {
 static void* x11_thread_routine(void* arg) {
 	loop_x();
 	XCloseDisplay(xdisplay);
+	return NULL;
 }
 
 int init_x(void) {
@@ -114,9 +114,10 @@ void loop_x(void) {
 			pthread_mutex_lock(&xmutex);
 			for(i = 0; i < arrlen(frames); i++) {
 				if(frames[i].frame->lowlevel->x11.window == ev.xmaprequest.window) {
-					XReparentWindow(xdisplay, frames[i].client, frames[i].frame->lowlevel->x11.window, MwDefaultBorderWidth(root), MwDefaultBorderWidth(root));
 					XMapWindow(xdisplay, ev.xmaprequest.window);
 					XMapWindow(xdisplay, frames[i].client);
+					XReparentWindow(xdisplay, frames[i].client, frames[i].frame->lowlevel->x11.window, MwDefaultBorderWidth(root), MwDefaultBorderWidth(root));
+					XFlush(xdisplay);
 					break;
 				}
 			}
