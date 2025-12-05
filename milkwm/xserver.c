@@ -284,11 +284,11 @@ void loop_x(void) {
 				if(windows[i].client == ev.xunmap.window) {
 					XWindowAttributes xwa;
 
-					XGetWindowAttributes(xdisplay, windows[i].frame->lowlevel->x11.window, &xwa);
-
-					pthread_mutex_lock(&xmutex);
-					XReparentWindow(xdisplay, windows[i].client, DefaultRootWindow(xdisplay), xwa.x, xwa.y);
-					pthread_mutex_unlock(&xmutex);
+					if(XGetWindowAttributes(xdisplay, windows[i].frame->lowlevel->x11.window, &xwa)) {
+						pthread_mutex_lock(&xmutex);
+						XReparentWindow(xdisplay, windows[i].client, DefaultRootWindow(xdisplay), xwa.x, xwa.y);
+						pthread_mutex_unlock(&xmutex);
+					}
 
 					wm_destroy(windows[i].frame);
 					arrdel(windows, i);
