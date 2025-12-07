@@ -14,15 +14,12 @@ Window: {
 				"Iconify"
 			];
 		};
-		Background: {
-			# Just don't write anything if you want default background
-			#Inactive: "white";
-			Active: "blue";
+		Active: {
+			Background = "dark blue";
+			Foreground = "white";
 		};
-		Foreground: {
-			# Just don't write anything if you want default background
-			#Inactive: "black";
-			Active: "white";
+		Inactive: {
+			# Just don't write anything if you want default background/foreground
 		};
 
 		# Left, Right, or Center

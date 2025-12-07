@@ -34,6 +34,7 @@ void	 loop_wm(void);
 MwWidget wm_frame(int w, int h);
 void	 wm_destroy(MwWidget widget);
 void	 wm_set_name(MwWidget widget, const char* name);
+void	 wm_focus(MwWidget widget, int focus);
 
 /* config.c */
 extern config_t wm_config;

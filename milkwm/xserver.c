@@ -8,6 +8,12 @@ Display*	xdisplay;
 pthread_t	xthread;
 pthread_mutex_t xmutex;
 
+typedef struct window {
+	MwWidget frame;
+	Window	 client;
+} window_t;
+static window_t* windows = NULL;
+
 static void* old_handler;
 static int   error_happened = 0;
 static int   ignore_error(Display* disp, XErrorEvent* ev) {
@@ -32,13 +38,23 @@ static void* x11_thread_routine(void* arg) {
 }
 
 static Window focus = None, nofocus;
-static void   set_focus(Window w) {
-	  if(w == None) {
-		  XSetInputFocus(xdisplay, nofocus, RevertToParent, CurrentTime);
-	  } else {
-		  XSetInputFocus(xdisplay, w, RevertToParent, CurrentTime);
-	  }
-	  focus = w;
+
+static void set_focus(Window w) {
+	int i;
+	for(i = 0; i < arrlen(windows); i++) {
+		if(windows[i].client == w) {
+			wm_focus(windows[i].frame, 1);
+		} else if(focus == windows[i].client) {
+			wm_focus(windows[i].frame, 0);
+		}
+	}
+
+	if(w == None) {
+		XSetInputFocus(xdisplay, nofocus, RevertToParent, CurrentTime);
+	} else {
+		XSetInputFocus(xdisplay, w, RevertToParent, CurrentTime);
+	}
+	focus = w;
 }
 
 int init_x(void) {
@@ -71,12 +87,6 @@ int init_x(void) {
 	return 0;
 }
 
-typedef struct window {
-	MwWidget frame;
-	Window	 client;
-} window_t;
-static window_t* windows = NULL;
-
 static void save(Window w) {
 	XSelectInput(xdisplay, w, StructureNotifyMask | FocusChangeMask | PropertyChangeMask);
 	XSetWindowBorderWidth(xdisplay, w, 0);
@@ -100,13 +110,13 @@ static void set_name(Window wnd) {
 	Atom	       type;
 	int	       format;
 	unsigned long  nitem, after;
-	unsigned char* buf;
+	unsigned char* buf  = NULL;
 	Atom	       atom = XInternAtom(xdisplay, "WM_NAME", False);
 	int	       i;
 
 	for(i = 0; i < arrlen(windows); i++) {
 		if(windows[i].client == wnd) {
-			if(XGetWindowProperty(xdisplay, wnd, atom, 0, 1024, False, XA_STRING, &type, &format, &nitem, &after, &buf) == Success) {
+			if(XGetWindowProperty(xdisplay, wnd, atom, 0, 1024, False, XA_STRING, &type, &format, &nitem, &after, &buf) == Success && buf != NULL) {
 				wm_set_name(windows[i].frame, buf);
 				XFree(buf);
 			}
@@ -169,8 +179,13 @@ void loop_x(void) {
 			int	       i;
 			Window	       w = ev.xconfigurerequest.window;
 			for(i = 0; i < arrlen(windows); i++) {
-				if(windows[i].client == w) {
-					w = windows[i].frame->lowlevel->x11.window;
+				if(windows[i].frame->lowlevel->x11.window == w) {
+					xwc.x	   = ev.xconfigurerequest.x;
+					xwc.y	   = ev.xconfigurerequest.y;
+					xwc.width  = ev.xconfigurerequest.width - MwDefaultBorderWidth(windows[i].frame) * 2;
+					xwc.height = ev.xconfigurerequest.height - MwDefaultBorderWidth(windows[i].frame) * 4 - TitleBarHeight;
+
+					XConfigureWindow(xdisplay, windows[i].client, CWX | CWY | CWWidth | CWHeight, &xwc);
 					break;
 				}
 			}
@@ -187,6 +202,7 @@ void loop_x(void) {
 				if(windows[i].client == ev.xconfigure.window) {
 					XWindowChanges	  xwc;
 					XWindowAttributes xwa;
+
 					xwc.x	   = ev.xconfigure.x;
 					xwc.y	   = ev.xconfigure.y;
 					xwc.width  = MwDefaultBorderWidth(windows[i].frame) * 2 + ev.xconfigure.width;
@@ -203,6 +219,7 @@ void loop_x(void) {
 					} else if(xwa.width != xwc.width || xwa.height != xwc.height) {
 						XConfigureWindow(xdisplay, windows[i].frame->lowlevel->x11.window, CWWidth | CWHeight, &xwc);
 					}
+
 					break;
 				}
 			}
@@ -234,14 +251,11 @@ void loop_x(void) {
 				XMoveWindow(xdisplay, windows[i].frame->lowlevel->x11.window, xwa.x, xwa.y);
 
 				XMapWindow(xdisplay, ev.xmaprequest.window);
-				pthread_mutex_lock(&xmutex);
 				if(!XReparentWindow(xdisplay, windows[i].client, windows[i].frame->lowlevel->x11.window, MwDefaultBorderWidth(windows[i].frame), MwDefaultBorderWidth(windows[i].frame) * 3 + TitleBarHeight)) {
-					pthread_mutex_unlock(&xmutex);
 					wm_destroy(windows[i].frame);
 					arrdel(windows, i);
 					continue;
 				}
-				pthread_mutex_unlock(&xmutex);
 				if(!XMapWindow(xdisplay, windows[i].client)) {
 					wm_destroy(windows[i].frame);
 					arrdel(windows, i);
@@ -285,9 +299,7 @@ void loop_x(void) {
 					XWindowAttributes xwa;
 
 					if(XGetWindowAttributes(xdisplay, windows[i].frame->lowlevel->x11.window, &xwa)) {
-						pthread_mutex_lock(&xmutex);
 						XReparentWindow(xdisplay, windows[i].client, DefaultRootWindow(xdisplay), xwa.x, xwa.y);
-						pthread_mutex_unlock(&xmutex);
 					}
 
 					wm_destroy(windows[i].frame);
