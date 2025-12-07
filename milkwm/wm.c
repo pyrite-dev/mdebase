@@ -6,6 +6,7 @@
 static MwWidget root;
 
 typedef struct wmframe {
+	MwWidget inside;
 	MwWidget titlebar;
 	MwWidget title;
 
@@ -53,14 +54,19 @@ static void resize(MwWidget handle, void* user, void* client) {
 	int	   x;
 	int	   i;
 
+	MwVaApply(f->inside,
+		  MwNwidth, ww - MwDefaultBorderWidth(handle) * 2 - Gap * 2,
+		  MwNheight, wh - MwDefaultBorderWidth(handle) * 2 - Gap * 2,
+		  NULL);
+
 	MwVaApply(f->titlebar,
 		  MwNx, MwDefaultBorderWidth(handle),
 		  MwNy, MwDefaultBorderWidth(handle),
-		  MwNwidth, ww - MwDefaultBorderWidth(handle) * 2,
-		  MwNheight, TitleBarHeight + MwDefaultBorderWidth(handle) * 2,
+		  MwNwidth, ww - MwDefaultBorderWidth(handle) * 4 - Gap * 2,
+		  MwNheight, TitleBarHeight,
 		  NULL);
 
-	x = MwDefaultBorderWidth(handle);
+	x = 0;
 	for(i = 0; i < arrlen(f->left); i++) {
 		MwVaApply(f->left[i],
 			  MwNx, x,
@@ -68,7 +74,7 @@ static void resize(MwWidget handle, void* user, void* client) {
 		x += TitleBarHeight;
 	}
 
-	x = MwGetInteger(f->titlebar, MwNwidth) - MwDefaultBorderWidth(handle);
+	x = MwGetInteger(f->titlebar, MwNwidth);
 	for(i = 0; i < arrlen(f->right); i++) {
 		x -= TitleBarHeight;
 		MwVaApply(f->right[i],
@@ -77,10 +83,10 @@ static void resize(MwWidget handle, void* user, void* client) {
 	}
 
 	MwVaApply(f->title,
-		  MwNx, MwDefaultBorderWidth(f->titlebar) + arrlen(f->left) * TitleBarHeight,
-		  MwNy, MwDefaultBorderWidth(f->titlebar),
-		  MwNwidth, MwGetInteger(f->titlebar, MwNwidth) - MwDefaultBorderWidth(f->titlebar) * 2 - arrlen(f->left) * TitleBarHeight - arrlen(f->right) * TitleBarHeight,
-		  MwNheight, MwGetInteger(f->titlebar, MwNheight) - MwDefaultBorderWidth(f->titlebar) * 2,
+		  MwNx, arrlen(f->left) * TitleBarHeight,
+		  MwNy, 0,
+		  MwNwidth, MwGetInteger(f->titlebar, MwNwidth) - arrlen(f->left) * TitleBarHeight - arrlen(f->right) * TitleBarHeight,
+		  MwNheight, MwGetInteger(f->titlebar, MwNheight),
 		  NULL);
 }
 
@@ -148,6 +154,8 @@ static void drag_down(MwWidget handle, void* user, void* client) {
 	f->dragging	= 1;
 	f->drag_point.x = c.x - x;
 	f->drag_point.y = c.y - y;
+
+	set_focus_x(w);
 }
 
 static void drag_up(MwWidget handle, void* user, void* client) {
@@ -192,7 +200,7 @@ MwWidget wm_frame(int w, int h) {
 
 	pthread_mutex_lock(&xmutex);
 
-	wnd	    = MwVaCreateWidget(MwWindowClass, "frame", root, MwDEFAULT, MwDEFAULT, w + MwDefaultBorderWidth(root) * 2, h + MwDefaultBorderWidth(root) * 4 + TitleBarHeight,
+	wnd	    = MwVaCreateWidget(MwWindowClass, "frame", root, MwDEFAULT, MwDEFAULT, wm_entire_width(w), wm_entire_height(h),
 				       MwNhasBorder, 1,
 				       MwNinverted, 0,
 				       NULL);
@@ -224,10 +232,12 @@ MwWidget wm_frame(int w, int h) {
 	f->left	 = NULL;
 	f->right = NULL;
 
-	f->titlebar = MwVaCreateWidget(MwFrameClass, "titlebar", wnd, 0, 0, 0, 0,
-				       MwNhasBorder, 1,
-				       MwNinverted, 1,
-				       NULL);
+	f->inside = MwVaCreateWidget(MwFrameClass, "inside", wnd, MwDefaultBorderWidth(wnd) + Gap, MwDefaultBorderWidth(wnd) + Gap, 0, 0,
+				     MwNhasBorder, 1,
+				     MwNinverted, 1,
+				     NULL);
+
+	f->titlebar = MwCreateWidget(MwFrameClass, "titlebar", f->inside, 0, 0, 0, 0);
 	MwAddUserHandler(f->titlebar, MwNmouseUpHandler, drag_up, NULL);
 	MwAddUserHandler(f->titlebar, MwNmouseMoveHandler, drag, NULL);
 	MwAddUserHandler(f->titlebar, MwNmouseDownHandler, drag_down, NULL);
@@ -239,7 +249,7 @@ MwWidget wm_frame(int w, int h) {
 
 	s = config_lookup(&wm_config, "Window.TitleBar.Buttons.Left");
 	for(i = 0; (str = config_setting_get_string_elem(s, i)) != NULL; i++) {
-		MwWidget w = MwVaCreateWidget(MwButtonClass, "button", f->titlebar, 0, MwDefaultBorderWidth(wnd), TitleBarHeight, TitleBarHeight,
+		MwWidget w = MwVaCreateWidget(MwButtonClass, "button", f->titlebar, 0, 0, TitleBarHeight, TitleBarHeight,
 					      MwNborderWidth, 1,
 					      NULL);
 
@@ -250,7 +260,7 @@ MwWidget wm_frame(int w, int h) {
 
 	s = config_lookup(&wm_config, "Window.TitleBar.Buttons.Right");
 	for(i = 0; (str = config_setting_get_string_elem(s, i)) != NULL; i++) {
-		MwWidget w = MwVaCreateWidget(MwButtonClass, "button", f->titlebar, 0, MwDefaultBorderWidth(wnd), TitleBarHeight, TitleBarHeight,
+		MwWidget w = MwVaCreateWidget(MwButtonClass, "button", f->titlebar, 0, 0, TitleBarHeight, TitleBarHeight,
 					      MwNborderWidth, 1,
 					      NULL);
 
@@ -315,4 +325,38 @@ void wm_focus(MwWidget widget, int focus) {
 		  NULL);
 
 	pthread_mutex_unlock(&xmutex);
+}
+
+MwWidget wm_get_inside(MwWidget widget) {
+	MwWidget ret;
+
+	pthread_mutex_lock(&xmutex);
+	ret = ((wmframe_t*)widget->opaque)->inside;
+	pthread_mutex_unlock(&xmutex);
+
+	return ret;
+}
+
+int wm_entire_width(int content) {
+	return content + MwDefaultBorderWidth(root) * 4 + Gap * 2;
+}
+
+int wm_entire_height(int content) {
+	return content + MwDefaultBorderWidth(root) * 4 + Gap * 2 + TitleBarHeight;
+}
+
+int wm_content_width(int entire) {
+	return entire - wm_entire_width(0);
+}
+
+int wm_content_height(int entire) {
+	return entire - wm_entire_height(0);
+}
+
+int wm_content_x(void) {
+	return MwDefaultBorderWidth(root);
+}
+
+int wm_content_y(void) {
+	return MwDefaultBorderWidth(root) + TitleBarHeight;
 }

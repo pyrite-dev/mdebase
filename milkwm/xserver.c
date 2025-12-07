@@ -8,6 +8,10 @@ Display*	xdisplay;
 pthread_t	xthread;
 pthread_mutex_t xmutex;
 
+static pthread_mutex_t focusmutex;
+
+static Atom milkwm_set_focus;
+
 typedef struct window {
 	MwWidget frame;
 	Window	 client;
@@ -42,19 +46,26 @@ static Window focus = None, nofocus;
 static void set_focus(Window w) {
 	int i;
 	for(i = 0; i < arrlen(windows); i++) {
+		pthread_mutex_lock(&focusmutex);
 		if(windows[i].client == w) {
+			pthread_mutex_unlock(&focusmutex);
 			wm_focus(windows[i].frame, 1);
-		} else if(focus == windows[i].client) {
+		} else if(focus != w && focus == windows[i].client) {
+			pthread_mutex_unlock(&focusmutex);
 			wm_focus(windows[i].frame, 0);
+		} else {
+			pthread_mutex_unlock(&focusmutex);
 		}
 	}
 
+	pthread_mutex_lock(&focusmutex);
+	focus = w;
 	if(w == None) {
 		XSetInputFocus(xdisplay, nofocus, RevertToParent, CurrentTime);
 	} else {
 		XSetInputFocus(xdisplay, w, RevertToParent, CurrentTime);
 	}
-	focus = w;
+	pthread_mutex_unlock(&focusmutex);
 }
 
 int init_x(void) {
@@ -80,7 +91,10 @@ int init_x(void) {
 	XChangeProperty(xdisplay, nofocus, XInternAtom(xdisplay, "_NET_SUPPORTING_WM_CHECK", False), XA_WINDOW, 32, PropModeReplace, (unsigned char*)&nofocus, 1);
 	XChangeProperty(xdisplay, nofocus, XInternAtom(xdisplay, "_NET_WM_NAME", False), XInternAtom(xdisplay, "UTF8_STRING", False), 8, PropModeReplace, (unsigned char*)"milkwm", 6);
 
+	milkwm_set_focus = XInternAtom(xdisplay, "MILKWM_SET_FOCUS", False);
+
 	pthread_mutex_init(&xmutex, NULL);
+	pthread_mutex_init(&focusmutex, NULL);
 
 	pthread_create(&xthread, NULL, x11_thread_routine, NULL);
 
@@ -88,6 +102,7 @@ int init_x(void) {
 }
 
 static void save(Window w) {
+	XGrabButton(xdisplay, 1, 0, w, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
 	XSelectInput(xdisplay, w, StructureNotifyMask | FocusChangeMask | PropertyChangeMask);
 	XSetWindowBorderWidth(xdisplay, w, 0);
 	XAddToSaveSet(xdisplay, w);
@@ -159,17 +174,37 @@ void loop_x(void) {
 
 	while(1) {
 		XNextEvent(xdisplay, &ev);
-		if(ev.type == ButtonPress) {
+		if((ev.type == ButtonPress || ev.type == ButtonRelease) && ev.xbutton.subwindow != None && ev.xbutton.button == Button1) {
+			Window w = None;
 			if(ev.type == ButtonPress) {
 				for(i = 0; i < arrlen(windows); i++) {
-					if(windows[i].frame->lowlevel->x11.window == ev.xbutton.window || parent_eq(ev.xbutton.window, windows[i].frame->lowlevel->x11.window)) {
+					if(windows[i].frame->lowlevel->x11.window == ev.xbutton.subwindow || parent_eq(ev.xbutton.subwindow, windows[i].frame->lowlevel->x11.window)) {
 						set_focus(windows[i].client);
+						w = windows[i].frame->lowlevel->x11.window;
 						break;
 					}
 				}
-				if(i != arrlen(windows)) continue;
-				set_focus(ev.xbutton.window);
 			}
+
+			ev.xbutton.window    = ev.xbutton.subwindow;
+			ev.xbutton.subwindow = None;
+			XSendEvent(xdisplay, ev.xbutton.window, False, 0, &ev);
+
+			if(w != None) XRaiseWindow(xdisplay, w);
+		} else if(ev.type == MotionNotify && ev.xmotion.subwindow != None) {
+			Window w = None;
+			for(i = 0; i < arrlen(windows); i++) {
+				if(windows[i].frame->lowlevel->x11.window == ev.xbutton.subwindow || parent_eq(ev.xbutton.subwindow, windows[i].frame->lowlevel->x11.window)) {
+					w = windows[i].frame->lowlevel->x11.window;
+					break;
+				}
+			}
+
+			ev.xmotion.window    = ev.xmotion.subwindow;
+			ev.xmotion.subwindow = None;
+			XSendEvent(xdisplay, ev.xmotion.window, False, 0, &ev);
+
+			if(w != None) XRaiseWindow(xdisplay, w);
 		} else if(ev.type == FocusIn && ev.xfocus.window != focus) {
 			set_focus(focus);
 		} else if(ev.type == FocusOut && focus != None) {
@@ -182,8 +217,8 @@ void loop_x(void) {
 				if(windows[i].frame->lowlevel->x11.window == w) {
 					xwc.x	   = ev.xconfigurerequest.x;
 					xwc.y	   = ev.xconfigurerequest.y;
-					xwc.width  = ev.xconfigurerequest.width - MwDefaultBorderWidth(windows[i].frame) * 2;
-					xwc.height = ev.xconfigurerequest.height - MwDefaultBorderWidth(windows[i].frame) * 4 - TitleBarHeight;
+					xwc.width  = wm_content_width(ev.xconfigurerequest.width);
+					xwc.height = wm_content_height(ev.xconfigurerequest.height);
 
 					XConfigureWindow(xdisplay, windows[i].client, CWX | CWY | CWWidth | CWHeight, &xwc);
 					break;
@@ -205,16 +240,16 @@ void loop_x(void) {
 
 					xwc.x	   = ev.xconfigure.x;
 					xwc.y	   = ev.xconfigure.y;
-					xwc.width  = MwDefaultBorderWidth(windows[i].frame) * 2 + ev.xconfigure.width;
-					xwc.height = MwDefaultBorderWidth(windows[i].frame) * 4 + TitleBarHeight + ev.xconfigure.height;
+					xwc.width  = wm_entire_width(ev.xconfigure.width);
+					xwc.height = wm_entire_height(ev.xconfigure.height);
 
 					XGetWindowAttributes(xdisplay, windows[i].frame->lowlevel->x11.window, &xwa);
 
-					if(xwc.x != MwDefaultBorderWidth(windows[i].frame) || xwc.y != (MwDefaultBorderWidth(windows[i].frame) * 3 + TitleBarHeight)) {
+					if(xwc.x != wm_content_x() || xwc.y != wm_content_y()) {
 						XConfigureWindow(xdisplay, windows[i].frame->lowlevel->x11.window, CWX | CWY | CWWidth | CWHeight, &xwc);
 
-						xwc.x = MwDefaultBorderWidth(windows[i].frame);
-						xwc.y = MwDefaultBorderWidth(windows[i].frame) * 3 + TitleBarHeight;
+						xwc.x = wm_content_x();
+						xwc.y = wm_content_y();
 						XConfigureWindow(xdisplay, windows[i].client, CWX | CWY, &xwc);
 					} else if(xwa.width != xwc.width || xwa.height != xwc.height) {
 						XConfigureWindow(xdisplay, windows[i].frame->lowlevel->x11.window, CWWidth | CWHeight, &xwc);
@@ -251,7 +286,7 @@ void loop_x(void) {
 				XMoveWindow(xdisplay, windows[i].frame->lowlevel->x11.window, xwa.x, xwa.y);
 
 				XMapWindow(xdisplay, ev.xmaprequest.window);
-				if(!XReparentWindow(xdisplay, windows[i].client, windows[i].frame->lowlevel->x11.window, MwDefaultBorderWidth(windows[i].frame), MwDefaultBorderWidth(windows[i].frame) * 3 + TitleBarHeight)) {
+				if(!XReparentWindow(xdisplay, windows[i].client, wm_get_inside(windows[i].frame)->lowlevel->x11.window, wm_content_x(), wm_content_y())) {
 					wm_destroy(windows[i].frame);
 					arrdel(windows, i);
 					continue;
@@ -323,7 +358,34 @@ void loop_x(void) {
 
 				set_focus(w);
 			}
+		} else if(ev.type == ClientMessage) {
+			if(ev.xclient.message_type == milkwm_set_focus && ev.xclient.data.l[0] == milkwm_set_focus) {
+				set_focus(ev.xclient.data.l[1]);
+			}
 		}
 	}
 	end_error();
+}
+
+void set_focus_x(MwWidget widget) {
+	int i;
+
+	for(i = 0; i < arrlen(windows); i++) {
+		if(windows[i].frame == widget) {
+			XEvent ev;
+
+			ev.type			= ClientMessage;
+			ev.xclient.window	= nofocus;
+			ev.xclient.message_type = milkwm_set_focus;
+			ev.xclient.format	= 32;
+			ev.xclient.data.l[0]	= ev.xclient.message_type;
+			ev.xclient.data.l[1]	= windows[i].client;
+
+			XSendEvent(xdisplay, nofocus, False, 0, &ev);
+
+			XRaiseWindow(xdisplay, windows[i].frame->lowlevel->x11.window);
+
+			break;
+		}
+	}
 }
