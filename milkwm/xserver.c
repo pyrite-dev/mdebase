@@ -71,6 +71,7 @@ static void set_focus(Window w) {
 int init_x(void) {
 	void*		     old;
 	XSetWindowAttributes xswa;
+	Cursor		     cur;
 
 	xswa.override_redirect = True;
 
@@ -90,6 +91,10 @@ int init_x(void) {
 	XChangeProperty(xdisplay, DefaultRootWindow(xdisplay), XInternAtom(xdisplay, "_NET_SUPPORTING_WM_CHECK", False), XA_WINDOW, 32, PropModeReplace, (unsigned char*)&nofocus, 1);
 	XChangeProperty(xdisplay, nofocus, XInternAtom(xdisplay, "_NET_SUPPORTING_WM_CHECK", False), XA_WINDOW, 32, PropModeReplace, (unsigned char*)&nofocus, 1);
 	XChangeProperty(xdisplay, nofocus, XInternAtom(xdisplay, "_NET_WM_NAME", False), XInternAtom(xdisplay, "UTF8_STRING", False), 8, PropModeReplace, (unsigned char*)"milkwm", 6);
+
+	cur = MwLLX11CreateCursor(xdisplay, &MwCursorDefault, &MwCursorDefaultMask);
+	XDefineCursor(xdisplay, DefaultRootWindow(xdisplay), cur);
+	XFreeCursor(xdisplay, cur);
 
 	milkwm_set_focus = XInternAtom(xdisplay, "MILKWM_SET_FOCUS", False);
 
