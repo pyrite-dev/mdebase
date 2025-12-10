@@ -107,7 +107,7 @@ int init_x(void) {
 }
 
 static void save(Window w) {
-	XGrabButton(xdisplay, 1, 0, w, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+	XGrabButton(xdisplay, 1, 0, w, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeSync, GrabModeAsync, None, None);
 	XSelectInput(xdisplay, w, StructureNotifyMask | FocusChangeMask | PropertyChangeMask);
 	XSetWindowBorderWidth(xdisplay, w, 0);
 	XAddToSaveSet(xdisplay, w);
@@ -179,11 +179,12 @@ void loop_x(void) {
 
 	while(1) {
 		XNextEvent(xdisplay, &ev);
-		if((ev.type == ButtonPress || ev.type == ButtonRelease) && ev.xbutton.subwindow != None && ev.xbutton.button == Button1) {
-			Window w = None;
+		if((ev.type == ButtonPress || ev.type == ButtonRelease) && ev.xbutton.button == Button1) {
+			Window w = None, t = ev.xbutton.window;
+			if(ev.xbutton.subwindow != None) t = ev.xbutton.subwindow;
 			if(ev.type == ButtonPress) {
 				for(i = 0; i < arrlen(windows); i++) {
-					if(windows[i].frame->lowlevel->x11.window == ev.xbutton.subwindow || parent_eq(ev.xbutton.subwindow, windows[i].frame->lowlevel->x11.window)) {
+					if(windows[i].frame->lowlevel->x11.window == t || parent_eq(t, windows[i].frame->lowlevel->x11.window)) {
 						set_focus(windows[i].client);
 						w = windows[i].frame->lowlevel->x11.window;
 						break;
@@ -191,25 +192,22 @@ void loop_x(void) {
 				}
 			}
 
-			ev.xbutton.window    = ev.xbutton.subwindow;
-			ev.xbutton.subwindow = None;
-			XSendEvent(xdisplay, ev.xbutton.window, False, 0, &ev);
-
 			if(w != None) XRaiseWindow(xdisplay, w);
+
+			XAllowEvents(xdisplay, ReplayPointer, CurrentTime);
 		} else if(ev.type == MotionNotify && ev.xmotion.subwindow != None) {
-			Window w = None;
+			Window w = None, t = ev.xmotion.window;
+			if(ev.xmotion.subwindow != None) t = ev.xmotion.subwindow;
 			for(i = 0; i < arrlen(windows); i++) {
-				if(windows[i].frame->lowlevel->x11.window == ev.xbutton.subwindow || parent_eq(ev.xbutton.subwindow, windows[i].frame->lowlevel->x11.window)) {
+				if(windows[i].frame->lowlevel->x11.window == t || parent_eq(t, windows[i].frame->lowlevel->x11.window)) {
 					w = windows[i].frame->lowlevel->x11.window;
 					break;
 				}
 			}
 
-			ev.xmotion.window    = ev.xmotion.subwindow;
-			ev.xmotion.subwindow = None;
-			XSendEvent(xdisplay, ev.xmotion.window, False, 0, &ev);
-
 			if(w != None) XRaiseWindow(xdisplay, w);
+
+			XAllowEvents(xdisplay, ReplayPointer, CurrentTime);
 		} else if(ev.type == FocusIn && ev.xfocus.window != focus) {
 			set_focus(focus);
 		} else if(ev.type == FocusOut && focus != None) {
