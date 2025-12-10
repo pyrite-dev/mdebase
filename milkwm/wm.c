@@ -14,10 +14,15 @@ typedef struct wmframe {
 	MwWidget* right;
 
 	MwLLPixmap maximize;
+	MwLLPixmap restore;
 	MwLLPixmap iconify;
 
 	int	dragging;
 	MwPoint drag_point;
+
+	int	maximized;
+	MwRect	old_size;
+	MwPoint old_point;
 } wmframe_t;
 
 void loop_wm(void) {
@@ -113,6 +118,46 @@ static void apply_config(MwWidget wnd) {
 	}
 }
 
+static void maximize(MwWidget handle, void* user, void* client) {
+	wmframe_t* f = ((MwWidget)user)->opaque;
+	MwRect	   rc;
+
+	if(f->maximized) {
+		f->maximized = 0;
+
+		MwVaApply(handle,
+			  MwNpixmap, f->maximize,
+			  NULL);
+
+		MwVaApply(user,
+			  MwNx, f->old_point.x,
+			  MwNy, f->old_point.y,
+			  MwNwidth, f->old_size.width,
+			  MwNheight, f->old_size.height,
+			  NULL);
+	} else {
+		f->maximized = 1;
+
+		f->old_point.x	   = MwGetInteger(user, MwNx);
+		f->old_point.y	   = MwGetInteger(user, MwNy);
+		f->old_size.width  = MwGetInteger(user, MwNwidth);
+		f->old_size.height = MwGetInteger(user, MwNheight);
+
+		MwGetScreenSize(user, &rc);
+
+		MwVaApply(handle,
+			  MwNpixmap, f->restore,
+			  NULL);
+
+		MwVaApply(user,
+			  MwNx, 0,
+			  MwNy, 0,
+			  MwNwidth, rc.width,
+			  MwNheight, rc.height,
+			  NULL);
+	}
+}
+
 static void apply_button(MwWidget widget, const char* str) {
 	MwWidget   w = widget;
 	wmframe_t* f;
@@ -124,15 +169,15 @@ static void apply_button(MwWidget widget, const char* str) {
 
 	if(strcmp(str, "Maximize") == 0) {
 		px = f->maximize;
+		MwAddUserHandler(widget, MwNactivateHandler, maximize, w);
 	} else if(strcmp(str, "Iconify") == 0) {
 		px = f->iconify;
 	}
 
 	if(px != NULL) {
-		int p = (MwGetInteger(widget, MwNwidth) - MwDefaultBorderWidth(widget) * 2 - px->common.width) / 2;
 		MwVaApply(widget,
 			  MwNpixmap, px,
-			  MwNpadding, p,
+			  MwNfillArea, 0,
 			  NULL);
 	}
 }
@@ -176,6 +221,7 @@ static void drag(MwWidget handle, void* user, void* client) {
 	while(w != NULL && strcmp(MwGetName(w), "frame") != 0) w = MwGetParent(w);
 
 	f = w->opaque;
+	if(f->maximized) return;
 
 	if(f->dragging) {
 		MwPoint c;
@@ -208,25 +254,34 @@ MwWidget wm_frame(int w, int h) {
 
 	MwAddUserHandler(wnd, MwNresizeHandler, resize, NULL);
 
-	f->dragging = 0;
+	f->maximized = 0;
+	f->dragging  = 0;
 
-	icon = malloc(6 * 6 * 4);
+	icon = malloc(10 * 6 * 4);
 
-	memset(icon, 0, 6 * 6 * 4);
-	for(y = 0; y < 6; y++) {
-		for(x = 0; x < 6; x++) {
-			if((y == 0 || y == 5 || x == 0 || x == 5) && !(2 <= y && y <= 3) && !(2 <= x && x <= 3)) icon[(y * 6 + x) * 4 + 3] = 255;
-		}
-	}
-	f->iconify = MwLoadRaw(wnd, icon, 6, 6);
-
-	memset(icon, 0, 6 * 6 * 4);
+	memset(icon, 0, 10 * 6 * 4);
 	for(y = 0; y < 6; y++) {
 		for(x = 0; x < 6; x++) {
 			if(y == 0 || y == 5 || x == 0 || x == 5) icon[(y * 6 + x) * 4 + 3] = 255;
 		}
 	}
 	f->maximize = MwLoadRaw(wnd, icon, 6, 6);
+
+	memset(icon, 0, 10 * 6 * 4);
+	for(y = 0; y < 6; y++) {
+		for(x = 0; x < 10; x++) {
+			if((y == 0 || y == 5 || x == 2 || x == 7 || x == 0 || x == 9) && x != 1 && x != 8) icon[(y * 10 + x) * 4 + 3] = 255;
+		}
+	}
+	f->restore = MwLoadRaw(wnd, icon, 10, 6);
+
+	memset(icon, 0, 10 * 6 * 4);
+	for(y = 0; y < 6; y++) {
+		for(x = 0; x < 6; x++) {
+			if((y == 0 || y == 5 || x == 0 || x == 5) && !(2 <= y && y <= 3) && !(2 <= x && x <= 3)) icon[(y * 6 + x) * 4 + 3] = 255;
+		}
+	}
+	f->iconify = MwLoadRaw(wnd, icon, 6, 6);
 	free(icon);
 
 	f->left	 = NULL;

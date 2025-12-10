@@ -233,7 +233,7 @@ void loop_x(void) {
 			xwc.width  = ev.xconfigurerequest.width;
 			xwc.height = ev.xconfigurerequest.height;
 
-			XConfigureWindow(xdisplay, w, CWX | CWY | CWWidth | CWHeight, &xwc);
+			XConfigureWindow(xdisplay, w, ev.xconfigurerequest.value_mask, &xwc);
 		} else if(ev.type == ConfigureNotify) {
 			int i;
 			for(i = 0; i < arrlen(windows); i++) {
@@ -286,7 +286,7 @@ void loop_x(void) {
 					continue;
 				}
 
-				XMoveWindow(xdisplay, windows[i].frame->lowlevel->x11.window, xwa.x, xwa.y);
+				XMoveWindow(xdisplay, ev.xmaprequest.window, xwa.x, xwa.y);
 
 				XMapWindow(xdisplay, ev.xmaprequest.window);
 				if(!XReparentWindow(xdisplay, windows[i].client, wm_get_inside(windows[i].frame)->lowlevel->x11.window, wm_content_x(), wm_content_y())) {
@@ -332,10 +332,17 @@ void loop_x(void) {
 			}
 		} else if(ev.type == UnmapNotify) {
 			int i;
+			int nvm = 0;
 			for(i = 0; i < arrlen(windows); i++) {
 				if(windows[i].client == ev.xunmap.window) {
 					XWindowAttributes xwa;
 
+					if(XGetWindowAttributes(xdisplay, windows[i].client, &xwa)) {
+						if(xwa.map_state == IsViewable) {
+							nvm = 1;
+							break;
+						}
+					}
 					if(XGetWindowAttributes(xdisplay, windows[i].frame->lowlevel->x11.window, &xwa)) {
 						XReparentWindow(xdisplay, windows[i].client, DefaultRootWindow(xdisplay), xwa.x, xwa.y);
 					}
@@ -345,6 +352,7 @@ void loop_x(void) {
 					break;
 				}
 			}
+			if(nvm) continue;
 
 			if(focus == ev.xunmap.window) {
 				Window w = None;
