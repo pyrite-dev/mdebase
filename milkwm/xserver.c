@@ -220,8 +220,8 @@ void loop_x(void) {
 			Window	       w = ev.xconfigurerequest.window;
 			for(i = 0; i < arrlen(windows); i++) {
 				if(windows[i].frame->lowlevel->x11.window == w) {
-					xwc.x	   = ev.xconfigurerequest.x;
-					xwc.y	   = ev.xconfigurerequest.y;
+					xwc.x	   = wm_content_x();
+					xwc.y	   = wm_content_y();
 					xwc.width  = wm_content_width(ev.xconfigurerequest.width);
 					xwc.height = wm_content_height(ev.xconfigurerequest.height);
 
