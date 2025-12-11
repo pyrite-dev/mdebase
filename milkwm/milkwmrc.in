@@ -15,11 +15,18 @@ Window: {
 			];
 		};
 		Active: {
-			Background = "dark blue";
+			Background: {
+				From = "#435f7e";
+				To = "#0a284b";
+			};
 			Foreground = "white";
 		};
 		Inactive: {
 			# Just don't write anything if you want default background/foreground
+ 			Background: {
+				From = "#a0a0a0";
+				To = "#cdcdcd";
+			};
 		};
 
 		# Left, Right, or Center

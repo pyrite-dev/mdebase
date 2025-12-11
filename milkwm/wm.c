@@ -20,6 +20,8 @@ typedef struct wmframe {
 	int	dragging;
 	MwPoint drag_point;
 
+	MwLLPixmap background;
+
 	int	maximized;
 	MwRect	old_size;
 	MwPoint old_point;
@@ -121,6 +123,8 @@ static void apply_config(MwWidget wnd) {
 static void maximize(MwWidget handle, void* user, void* client) {
 	wmframe_t* f = ((MwWidget)user)->opaque;
 	MwRect	   rc;
+
+	set_focus_x(user);
 
 	if(f->maximized) {
 		f->maximized = 0;
@@ -254,8 +258,9 @@ MwWidget wm_frame(int w, int h) {
 
 	MwAddUserHandler(wnd, MwNresizeHandler, resize, NULL);
 
-	f->maximized = 0;
-	f->dragging  = 0;
+	f->background = NULL;
+	f->maximized  = 0;
+	f->dragging   = 0;
 
 	icon = malloc(10 * 6 * 4);
 
@@ -340,7 +345,9 @@ void wm_destroy(MwWidget widget) {
 	arrfree(f->left);
 	arrfree(f->right);
 
+	if(f->background != NULL) MwLLDestroyPixmap(f->background);
 	MwLLDestroyPixmap(f->maximize);
+	MwLLDestroyPixmap(f->restore);
 	MwLLDestroyPixmap(f->iconify);
 	free(widget->opaque);
 	MwDestroyWidget(widget);
@@ -360,22 +367,75 @@ void wm_set_name(MwWidget widget, const char* name) {
 	free(s);
 }
 
+static char tmp_bg[64];
+MwLLPixmap  lookup_bg(MwWidget widget, const char* path, const char** bg) {
+	 config_setting_t* s  = config_lookup(&wm_config, path);
+	 wmframe_t*	   f  = widget->opaque;
+	 MwLLPixmap	   px = NULL;
+
+	 *bg = NULL;
+	 if(s == NULL) {
+	 } else if(config_setting_type(s) == CONFIG_TYPE_STRING) {
+		 *bg = config_setting_get_string(s);
+	 } else if(config_setting_type(s) == CONFIG_TYPE_GROUP) {
+		 const char*	from;
+		 const char*	to;
+		 int		i;
+		 unsigned char* d = malloc(1 * TitleBarHeight * 4);
+		 MwLLColor	cfrom;
+		 MwLLColor	cto;
+		 int		fr, fg, fb;
+		 int		tr, tg, tb;
+
+		 config_setting_lookup_string(s, "From", &from);
+		 config_setting_lookup_string(s, "To", &to);
+
+		 cfrom = MwParseColor(widget, from == NULL ? MwGetText(widget, MwNbackground) : from);
+		 cto   = MwParseColor(widget, to == NULL ? MwGetText(widget, MwNbackground) : to);
+		 MwGetColor(cfrom, &fr, &fg, &fb);
+		 MwGetColor(cto, &tr, &tg, &tb);
+		 MwLLFreeColor(cfrom);
+		 MwLLFreeColor(cto);
+
+		 memset(d, 255, 1 * TitleBarHeight * 4);
+
+		 for(i = 0; i < TitleBarHeight; i++) {
+			 d[i * 4 + 0] = fr + (tr - fr) * i / TitleBarHeight;
+			 d[i * 4 + 1] = fg + (tg - fg) * i / TitleBarHeight;
+			 d[i * 4 + 2] = fb + (tb - fb) * i / TitleBarHeight;
+		 }
+		 px = MwLoadRaw(widget, d, 1, TitleBarHeight);
+
+		 sprintf(tmp_bg, "#%02x%02x%02x", fr + (tr - fr) / 2, fg + (tg - fg) / 2, fb + (tb - fb) / 2);
+		 *bg = &tmp_bg[0];
+
+		 free(d);
+	 }
+
+	 return px;
+}
+
 void wm_focus(MwWidget widget, int focus) {
-	wmframe_t*  f  = widget->opaque;
-	const char* bg = NULL;
-	const char* fg = NULL;
+	wmframe_t*  f	 = widget->opaque;
+	const char* bg	 = NULL;
+	const char* fg	 = NULL;
+	MwLLPixmap  bgpx = NULL;
 
 	pthread_mutex_lock(&xmutex);
 	if(focus) {
-		config_lookup_string(&wm_config, "Window.TitleBar.Active.Background", &bg);
+		bgpx = lookup_bg(widget, "Window.TitleBar.Active.Background", &bg);
 		config_lookup_string(&wm_config, "Window.TitleBar.Active.Foreground", &fg);
 	} else {
-		config_lookup_string(&wm_config, "Window.TitleBar.Inactive.Background", &bg);
+		bgpx = lookup_bg(widget, "Window.TitleBar.Inactive.Background", &bg);
 		config_lookup_string(&wm_config, "Window.TitleBar.Inactive.Foreground", &fg);
 	}
 
+	if(f->background != NULL) MwLLDestroyPixmap(f->background);
+	f->background = bgpx;
+
 	MwVaApply(f->title,
 		  MwNbackground, bg,
+		  MwNbackgroundPixmap, bgpx,
 		  MwNforeground, fg,
 		  NULL);
 
