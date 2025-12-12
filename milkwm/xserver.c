@@ -322,6 +322,7 @@ void loop_x(void) {
 					continue;
 				}
 				XMapWindow(xdisplay, windows[i].client);
+				set_focus(windows[i].client);
 				continue;
 			}
 
@@ -355,12 +356,11 @@ void loop_x(void) {
 
 			for(i = 0; i < arrlen(windows); i++) {
 				if(windows[i].client == ev.xmap.window) {
-					if(windows[i].frame == NULL) printf("wtf?\n");
-					set_focus(windows[i].client);
 					windows[i].working = 0;
 					break;
-				} else if(windows[i].frame->lowlevel->x11.window == ev.xmap.window || nofocus == ev.xmap.window)
+				} else if(windows[i].frame->lowlevel->x11.window == ev.xmap.window || nofocus == ev.xmap.window) {
 					break;
+				}
 			}
 
 			if(i == arrlen(windows)) {
