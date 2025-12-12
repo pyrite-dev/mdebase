@@ -4,7 +4,7 @@
 #include <security/pam_appl.h>
 #include <stb_ds.h>
 
-MwWidget root;
+MwWidget root = NULL;
 MwWidget window, sesscombo, usercombo, passentry, reason;
 
 typedef struct session {

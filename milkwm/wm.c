@@ -3,7 +3,7 @@
 
 #include <stb_ds.h>
 
-static MwWidget root;
+MwWidget root = NULL;
 
 typedef struct wmframe {
 	MwWidget inside;

@@ -50,6 +50,14 @@ static int wm_detect(Display* disp, XErrorEvent* ev) {
 }
 
 static void* x11_thread_routine(void* arg) {
+	while(1) {
+		pthread_mutex_lock(&xmutex);
+		if(root != NULL) {
+			pthread_mutex_unlock(&xmutex);
+			break;
+		}
+		pthread_mutex_unlock(&xmutex);
+	}
 	loop_x();
 	XCloseDisplay(xdisplay);
 	return NULL;

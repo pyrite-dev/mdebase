@@ -32,6 +32,8 @@ void loop_x(void);
 void set_focus_x(MwWidget widget);
 
 /* wm.c */
+extern MwWidget root;
+
 void	 loop_wm(void);
 MwWidget wm_frame(int w, int h);
 void	 wm_destroy(MwWidget widget);
