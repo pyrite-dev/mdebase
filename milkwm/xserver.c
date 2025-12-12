@@ -316,11 +316,14 @@ void loop_x(void) {
 					XGetWindowAttributes(xdisplay, ev.xmaprequest.window, &xwa);
 				} while(xwa.map_state != IsViewable);
 
+				XGrabServer(xdisplay);
 				if(!XReparentWindow(xdisplay, windows[i].client, wm_get_inside(windows[i].frame)->lowlevel->x11.window, wm_content_x(), wm_content_y())) {
+					XUngrabServer(xdisplay);
 					wm_destroy(windows[i].frame);
 					arrdel(windows, i);
 					continue;
 				}
+				XUngrabServer(xdisplay);
 				XMapWindow(xdisplay, windows[i].client);
 				set_focus(windows[i].client);
 				continue;
