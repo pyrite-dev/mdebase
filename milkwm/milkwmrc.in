@@ -1,8 +1,10 @@
 # This file should be copied to .config/milkwm/milkwmrc
 
 Wallpaper: {
-	Type = "Fill";
-	Path = "@CMAKE_INSTALL_FULL_DATAROOTDIR@/wallpapers/mde/blue.png";
+#	Type = "Fill";
+#	Path = "@CMAKE_INSTALL_FULL_DATAROOTDIR@/wallpapers/mde/blue.png";
+	Type = "Solid";
+	Color = "#000040";
 };
 
 Window: {
