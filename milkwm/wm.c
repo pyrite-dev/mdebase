@@ -392,8 +392,8 @@ MwLLPixmap  lookup_bg(MwWidget widget, const char* path, const char** bg) {
 
 		 cfrom = MwParseColor(widget, from == NULL ? MwGetText(widget, MwNbackground) : from);
 		 cto   = MwParseColor(widget, to == NULL ? MwGetText(widget, MwNbackground) : to);
-		 MwGetColor(cfrom, &fr, &fg, &fb);
-		 MwGetColor(cto, &tr, &tg, &tb);
+		 MwColorGet(cfrom, &fr, &fg, &fb);
+		 MwColorGet(cto, &tr, &tg, &tb);
 		 MwLLFreeColor(cfrom);
 		 MwLLFreeColor(cto);
 
