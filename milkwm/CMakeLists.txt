@@ -13,3 +13,8 @@ target_link_libraries(
 
 include(GNUInstallDirs)
 configure_file(milkwmrc.in milkwmrc)
+
+install(
+	FILES ${CMAKE_CURRENT_BINARY_DIR}/milkwmrc
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/examples/milkwm
+)

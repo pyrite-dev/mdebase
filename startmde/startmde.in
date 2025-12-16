@@ -1,0 +1,5 @@
+#!/bin/sh
+
+"@CMAKE_INSTALL_FULL_BINDIR@/mpanel" &
+
+exec "@CMAKE_INSTALL_FULL_BINDIR@/milkwm"
