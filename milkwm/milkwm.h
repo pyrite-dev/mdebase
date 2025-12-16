@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <signal.h>
 
 #define TitleBarHeight 16
 #define Gap 1
@@ -30,9 +31,11 @@ extern Display*	       xdisplay;
 int  init_x(void);
 void loop_x(void);
 void set_focus_x(MwWidget widget);
+void set_background_x(void);
 
 /* wm.c */
 extern MwWidget root;
+extern int	wm_rehash;
 
 void	 loop_wm(void);
 MwWidget wm_frame(int w, int h);

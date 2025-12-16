@@ -3,7 +3,8 @@
 
 #include <stb_ds.h>
 
-MwWidget root = NULL;
+MwWidget root	   = NULL;
+int	 wm_rehash = 0;
 
 typedef struct wmframe {
 	MwWidget inside;
@@ -42,6 +43,13 @@ void loop_wm(void) {
 		int s = 0;
 
 		pthread_mutex_lock(&xmutex);
+		if(wm_rehash) {
+			wm_config_init();
+			wm_config_read();
+			set_background_x();
+			wm_rehash = 0;
+		}
+
 		while(MwPending(root)) {
 			if((s = MwStep(root)) != 0) break;
 		}
