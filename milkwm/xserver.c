@@ -3,6 +3,7 @@
 #include "milkwm.h"
 
 #include <stb_ds.h>
+#include <stb_image.h>
 
 Display*	xdisplay;
 pthread_t	xthread;
@@ -11,6 +12,10 @@ pthread_mutex_t xmutex;
 static pthread_mutex_t focusmutex;
 
 static Atom milkwm_set_focus;
+
+static int red_max   = 0, red_shift;
+static int green_max = 0, green_shift;
+static int blue_max  = 0, blue_shift;
 
 typedef struct window {
 	MwWidget frame;
@@ -77,10 +82,134 @@ static void   set_focus(Window w) {
 	  pthread_mutex_unlock(&focusmutex);
 }
 
+static unsigned long generate_color(int r, int g, int b) {
+	if(red_max == 0) {
+		XColor xc;
+
+		xc.red	 = (int)r * 256;
+		xc.green = (int)g * 256;
+		xc.blue	 = (int)b * 256;
+
+		XAllocColor(xdisplay, DefaultColormap(xdisplay, DefaultScreen(xdisplay)), &xc);
+
+		return xc.pixel;
+	} else {
+		unsigned long px;
+
+		px |= (r * red_max / 255) << red_shift;
+		px |= (g * green_max / 255) << green_shift;
+		px |= (b * blue_max / 255) << blue_shift;
+
+		return px;
+	}
+}
+
+static Pixmap render_image(Window wnd, const char* path, int tile, int fit) {
+	Pixmap		  px;
+	XWindowAttributes xwa;
+	GC		  gc;
+	int		  w, h;
+	unsigned int	  ch;
+	XImage*		  xi;
+	int		  y, x;
+	int		  pw, ph;
+	int		  width, height;
+	unsigned char*	  d = stbi_load(path, &w, &h, &ch, 3);
+	if(d == NULL) return None;
+
+	XGetWindowAttributes(xdisplay, wnd, &xwa);
+
+	if(tile) {
+		width  = w;
+		height = h;
+		tile   = 1;
+	} else {
+		double sx = (double)w / xwa.width;
+		double sy = (double)h / xwa.height;
+
+		if(fit ? (sx > sy) : (sy < sx)) {
+			width  = w / sx;
+			height = h / sx;
+		} else {
+			width  = w / sy;
+			height = h / sy;
+		}
+	}
+
+	px = XCreatePixmap(xdisplay, wnd, (pw = tile ? width : xwa.width), (ph = tile ? height : xwa.height), xwa.depth);
+	gc = XCreateGC(xdisplay, px, 0, NULL);
+
+	xi	 = XCreateImage(xdisplay, DefaultVisual(xdisplay, DefaultScreen(xdisplay)), xwa.depth, ZPixmap, 0, NULL, width, height, 32, 0);
+	xi->data = malloc(xi->bytes_per_line * height);
+	memset(xi->data, 0, xi->bytes_per_line * height);
+
+	for(y = 0; y < height; y++) {
+		for(x = 0; x < width; x++) {
+			unsigned long  px;
+			int	       ix, iy;
+			int	       ax, ay;
+			unsigned char* rgb;
+
+			ix = x * w / width;
+			iy = y * h / height;
+
+			rgb = &d[(iy * w + ix) * 3];
+
+			px = generate_color(rgb[0], rgb[1], rgb[2]);
+
+			XPutPixel(xi, x, y, px);
+		}
+	}
+	XPutImage(xdisplay, px, gc, xi, 0, 0, (pw - width) / 2, (ph - height) / 2, width, height);
+
+	XDestroyImage(xi);
+
+	XFreeGC(xdisplay, gc);
+
+	free(d);
+
+	return px;
+}
+
+/* this can be optimized by backends p much, so we do this in backend... */
+void set_background_x(void) {
+	const char* str;
+	const char* type;
+
+	if(config_lookup_string(&wm_config, "Wallpaper.Type", &str) && strcmp(str, "Solid") == 0 && config_lookup_string(&wm_config, "Wallpaper.Color", &str)) {
+		MwRGB  rgb;
+		XColor xc;
+
+		MwParseColorNoAllocate(str, &rgb);
+
+		xc.red	 = rgb.red * 256;
+		xc.green = rgb.green * 256;
+		xc.blue	 = rgb.blue * 256;
+
+		XAllocColor(xdisplay, DefaultColormap(xdisplay, DefaultScreen(xdisplay)), &xc);
+
+		XSetWindowBackground(xdisplay, DefaultRootWindow(xdisplay), xc.pixel);
+	} else if(config_lookup_string(&wm_config, "Wallpaper.Type", &type) && (strcmp(type, "Tile") == 0 || strcmp(type, "Fill") == 0 || strcmp(type, "Fit") == 0) && config_lookup_string(&wm_config, "Wallpaper.Path", &str)) {
+		XWindowAttributes xwa;
+		Pixmap		  px;
+
+		XGetWindowAttributes(xdisplay, DefaultRootWindow(xdisplay), &xwa);
+
+		if((px = render_image(DefaultRootWindow(xdisplay), str, strcmp(type, "Tile") == 0 ? 1 : 0, strcmp(type, "Fit") == 0 ? 1 : 0)) != None) {
+			XSetWindowBackgroundPixmap(xdisplay, DefaultRootWindow(xdisplay), px);
+			XFreePixmap(xdisplay, px);
+		}
+	}
+	XClearWindow(xdisplay, DefaultRootWindow(xdisplay));
+}
+
 int init_x(void) {
 	void*		     old;
 	XSetWindowAttributes xswa;
 	Cursor		     cur;
+	XVisualInfo	     xvi;
+	XVisualInfo*	     pxvi;
+	int		     n, i;
 
 	xswa.override_redirect = True;
 
@@ -106,6 +235,27 @@ int init_x(void) {
 	XFreeCursor(xdisplay, cur);
 
 	milkwm_set_focus = XInternAtom(xdisplay, "MILKWM_SET_FOCUS", False);
+
+	xvi.visualid = XVisualIDFromVisual(DefaultVisual(xdisplay, DefaultScreen(xdisplay)));
+
+	pxvi = XGetVisualInfo(xdisplay, VisualIDMask, &xvi, &n);
+
+	i = 0;
+	while(!((n << i) & pxvi->red_mask)) i++;
+	red_max	  = pxvi->red_mask >> i;
+	red_shift = i;
+
+	i = 0;
+	while(!((n << i) & pxvi->green_mask)) i++;
+	green_max   = pxvi->green_mask >> i;
+	green_shift = i;
+
+	i = 0;
+	while(!((n << i) & pxvi->blue_mask)) i++;
+	blue_max   = pxvi->blue_mask >> i;
+	blue_shift = i;
+
+	set_background_x();
 
 	pthread_mutex_init(&xmutex, NULL);
 	pthread_mutex_init(&focusmutex, NULL);
