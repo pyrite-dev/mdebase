@@ -441,6 +441,11 @@ void loop_x(void) {
 			XWindowAttributes xwa;
 
 			if(!XGetWindowAttributes(xdisplay, ev.xmaprequest.window, &xwa)) continue;
+			/* ?? ? ? ???? ?? ? ? */
+			if(xwa.override_redirect) {
+				XMapWindow(xdisplay, ev.xmaprequest.window);
+				continue;
+			}
 
 			for(i = 0; i < arrlen(windows); i++) {
 				if(windows[i].frame->lowlevel->x11.window == ev.xmaprequest.window) break;
@@ -468,7 +473,6 @@ void loop_x(void) {
 
 				XGrabServer(xdisplay);
 				if(!XReparentWindow(xdisplay, windows[i].client, wm_get_inside(windows[i].frame)->lowlevel->x11.window, wm_content_x(), wm_content_y())) {
-					XUngrabServer(xdisplay);
 					wm_destroy(windows[i].frame);
 					arrdel(windows, i);
 					continue;

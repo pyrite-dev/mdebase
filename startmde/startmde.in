@@ -1,5 +1,19 @@
 #!/bin/sh
 
-"@CMAKE_INSTALL_FULL_BINDIR@/mpanel" &
+stop_all () {
+	kill $PANEL $WM
+	exit
+}
 
-exec "@CMAKE_INSTALL_FULL_BINDIR@/milkwm"
+trap "stop_all" INT
+trap "stop_all" TERM
+
+"@CMAKE_INSTALL_FULL_BINDIR@/mpanel" &
+PANEL="$!"
+
+"@CMAKE_INSTALL_FULL_BINDIR@/milkwm" &
+WM="$!"
+
+while true; do
+	wait
+done

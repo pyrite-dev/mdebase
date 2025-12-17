@@ -1,9 +1,9 @@
 include(MDEBase)
 include(MDEPkgConfig)
-setup_project(mdm ${CMAKE_INSTALL_SBINDIR})
+mde_setup_project(mdm ${CMAKE_INSTALL_SBINDIR})
 
-pkg_config_add(mdm x11)
-pkg_config_add(mdm inih)
+mde_pkg_config_add(mdm x11)
+mde_pkg_config_add(mdm inih)
 
 target_link_libraries(
 	mdm

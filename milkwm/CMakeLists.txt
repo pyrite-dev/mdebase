@@ -1,9 +1,9 @@
 include(MDEBase)
 include(MDEPkgConfig)
-setup_project(milkwm ${CMAKE_INSTALL_BINDIR})
+mde_setup_project(milkwm ${CMAKE_INSTALL_BINDIR})
 
-pkg_config_add(milkwm x11)
-pkg_config_add(milkwm libconfig)
+mde_pkg_config_add(milkwm x11)
+mde_pkg_config_add(milkwm libconfig)
 
 target_link_libraries(
 	milkwm
