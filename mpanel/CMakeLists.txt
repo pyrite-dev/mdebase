@@ -13,6 +13,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL Linux)
 endif()
 
 add_subdirectory(separator)
+add_subdirectory(startbutton)
 
 include(GNUInstallDirs)
 configure_file(mpanelrc.in mpanelrc)
