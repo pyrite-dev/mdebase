@@ -189,7 +189,7 @@ void login_window(void) {
 	MwLibraryInit();
 
 	root = MwVaCreateWidget(NULL, "root", NULL, 0, 0, 0, 0,
-				MwNmodernLook, 0,
+				COMMON_LOOK,
 				NULL);
 
 	window	  = MwVaCreateWidget(MwWindowClass, "login", root, (x_width() - 366) / 2, (x_height() - 183) / 2, 366, 183,

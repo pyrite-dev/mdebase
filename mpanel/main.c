@@ -31,7 +31,7 @@ int main() {
 				  MwNtitle, "mpanel",
 				  MwNhasBorder, 1,
 				  MwNinverted, 0,
-				  MwNmodernLook, 0,
+				  COMMON_LOOK,
 				  NULL);
 
 	box = MwCreateWidget(MwBoxClass, "box", window, 0, 0, 0, 0);
