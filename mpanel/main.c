@@ -7,7 +7,7 @@ static int first = 1;
 
 static void resize(MwWidget handle, void* user, void* client) {
 	int bw = MwDefaultBorderWidth(window) + 2;
-	;
+
 	MwVaApply(box,
 		  MwNx, bw,
 		  MwNy, bw,
@@ -31,6 +31,7 @@ int main() {
 				  MwNtitle, "mpanel",
 				  MwNhasBorder, 1,
 				  MwNinverted, 0,
+				  MwNmodernLook, 0,
 				  NULL);
 
 	box = MwCreateWidget(MwBoxClass, "box", window, 0, 0, 0, 0);
