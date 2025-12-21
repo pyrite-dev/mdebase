@@ -1,18 +1,73 @@
 #include "config.h"
 
 #include <stb_image.h>
+#include <stb_ds.h>
 
+#define _MILSKO
 #include <Mw/Milsko.h>
 #include <libconfig.h>
 
 #define TriW 5
 
+typedef struct opaque {
+	MwLLPixmap closed;
+	MwLLPixmap opened;
+	MwWidget   submenu;
+	int	   is_opened;
+	MwMenu	   menu;
+} opaque_t;
+
+static void menu(MwWidget handle, void* user, void* client) {
+	opaque_t* opaque = handle->opaque;
+
+	if(opaque->is_opened) {
+		opaque->is_opened = 0;
+
+		opaque->submenu = NULL;
+
+		MwVaApply(handle,
+			  MwNpixmap, opaque->closed,
+			  MwNforceInverted, 0,
+			  NULL);
+	}
+}
+
+static void activate(MwWidget handle, void* user, void* client) {
+	opaque_t* opaque = handle->opaque;
+
+	opaque->is_opened = opaque->is_opened ? 0 : 1;
+	if(opaque->is_opened) {
+		MwPoint p;
+
+		MwVaApply(handle,
+			  MwNpixmap, opaque->opened,
+			  MwNforceInverted, 1,
+			  NULL);
+
+		opaque->submenu = MwCreateWidget(MwSubMenuClass, "submenu", handle, 0, MwGetInteger(handle, MwNheight), 0, 0);
+
+		p.x = 0;
+		p.y = 0;
+		MwSubMenuAppear(opaque->submenu, opaque->menu, &p, 1);
+	} else {
+		MwVaApply(handle,
+			  MwNpixmap, opaque->closed,
+			  MwNforceInverted, 0,
+			  NULL);
+
+		if(opaque->submenu != NULL) MwDestroyWidget(opaque->submenu);
+	}
+}
+
 void module(MwWidget box, config_setting_t* setting) {
 	MwLLPixmap     closed = NULL;
 	MwLLPixmap     opened = NULL;
+	MwWidget       btn;
 	int	       w, h;
 	unsigned int   ch;
 	unsigned char* rgb;
+	opaque_t*      opaque = malloc(sizeof(*opaque));
+	MwMenu	       m;
 
 	if((rgb = stbi_load(ICON64DIR "/logo.png", &w, &h, &ch, 4)) != NULL) {
 		int	       bw   = MwGetInteger(box, MwNheight) - MwDefaultBorderWidth(box) * 2;
@@ -59,9 +114,35 @@ void module(MwWidget box, config_setting_t* setting) {
 		free(rgb);
 	}
 
-	MwVaCreateWidget(MwButtonClass, "startbutton", box, 0, 0, 0, 0,
-			 MwNfixedSize, MwGetInteger(box, MwNheight),
-			 MwNflat, 1,
-			 MwNpixmap, closed,
-			 NULL);
+	btn = MwVaCreateWidget(MwButtonClass, "startbutton", box, 0, 0, 0, 0,
+			       MwNfixedSize, MwGetInteger(box, MwNheight),
+			       MwNflat, 1,
+			       MwNpixmap, closed,
+			       NULL);
+
+	opaque->closed	  = closed;
+	opaque->opened	  = opened;
+	opaque->submenu	  = NULL;
+	opaque->is_opened = 0;
+
+	opaque->menu	   = malloc(sizeof(*opaque->menu));
+	opaque->menu->name = NULL;
+	opaque->menu->keep = 0;
+	opaque->menu->wsub = NULL;
+	opaque->menu->sub  = NULL;
+
+	int i;
+	for(i = 0; i < 5; i++) {
+		m	= malloc(sizeof(*m));
+		m->name = MwStringDuplicate("Test");
+		m->keep = 0;
+		m->wsub = NULL;
+		m->sub	= NULL;
+		arrput(opaque->menu->sub, m);
+	}
+
+	btn->opaque = opaque;
+
+	MwAddUserHandler(btn, MwNactivateHandler, activate, NULL);
+	MwAddUserHandler(btn, MwNmenuHandler, menu, NULL);
 }
