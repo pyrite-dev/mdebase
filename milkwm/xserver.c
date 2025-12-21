@@ -201,6 +201,7 @@ void set_background_x(void) {
 		}
 	}
 	XClearWindow(xdisplay, DefaultRootWindow(xdisplay));
+	XFlush(xdisplay);
 }
 
 int init_x(void) {
