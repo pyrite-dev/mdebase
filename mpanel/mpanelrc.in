@@ -6,6 +6,9 @@ Modules: (
 		Type = "Separator";
 	},
 	{
+		Type = "TaskBar";
+	},
+	{
 		Type = "Separator";
 	},
 	{
