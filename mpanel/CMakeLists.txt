@@ -14,6 +14,7 @@ endif()
 
 add_subdirectory(separator)
 add_subdirectory(startbutton)
+add_subdirectory(time)
 
 include(GNUInstallDirs)
 configure_file(mpanelrc.in mpanelrc)

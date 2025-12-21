@@ -4,5 +4,11 @@ Modules: (
 	},
 	{
 		Type = "Separator";
+	},
+	{
+		Type = "Separator";
+	},
+	{
+		Type = "Time";
 	}
 );

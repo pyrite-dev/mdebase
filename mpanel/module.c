@@ -40,8 +40,6 @@ void load_modules(void) {
 					void (*call)(MwWidget box, config_setting_t* setting) = dlsym(lib, "module");
 
 					call(box, c);
-
-					dlclose(lib);
 				}
 
 				free(p);
