@@ -12,6 +12,7 @@
 
 /* Standard */
 #include <dlfcn.h>
+#include <unistd.h>
 
 /* main.c */
 extern MwWidget window, box;

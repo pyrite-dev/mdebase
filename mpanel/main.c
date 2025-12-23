@@ -25,6 +25,8 @@ static void resize(MwWidget handle, void* user, void* client) {
 int main() {
 	MwRect rc;
 
+	signal(SIGCHLD, SIG_IGN);
+
 	MwLibraryInit();
 
 	window = MwVaCreateWidget(MwWindowClass, "window", NULL, MwDEFAULT, MwDEFAULT, 0, 0,
