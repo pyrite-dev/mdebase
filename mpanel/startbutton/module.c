@@ -4,8 +4,13 @@
 #include <stb_ds.h>
 
 #define _MILSKO
+#include <MDE/Foundation.h>
 #include <Mw/Milsko.h>
 #include <libconfig.h>
+#include <ini.h>
+
+#include <stdlib.h>
+#include <string.h>
 
 #define TriW 5
 
@@ -15,7 +20,147 @@ typedef struct opaque {
 	MwWidget   submenu;
 	int	   is_opened;
 	MwMenu	   menu;
+
+	char* name;
+	char* category;
 } opaque_t;
+
+static int dumper(void* user, const char* section, const char* name, const char* value) {
+	opaque_t* opaque = user;
+	if(strcmp(section, "Desktop Entry") != 0) return 1;
+
+	if(strcmp(name, "Name") == 0){
+		opaque->name = MwStringDuplicate(value);
+	}else if(strcmp(name, "Categories") == 0){
+		opaque->category = MwStringDuplicate(value);
+	}
+
+	return 1;
+}
+
+enum CATEGORY {
+	C_UNKNOWN = 0,
+	C_AUDIOVIDEO,
+	C_AUDIO,
+	C_VIDEO,
+	C_DEVELOPMENT,
+	C_EDUCATION,
+	C_GAME,
+	C_GRAPHICS,
+	C_NETWORK,
+	C_OFFICE,
+	C_SCIENCE,
+	C_SETTINGS,
+	C_SYSTEM,
+	C_UTILITY
+};
+
+static const char* category_mapping[] = {
+	"Lost & Found",
+	"Multimedia",
+	"Audio",
+	"Video",
+	"Development",
+	"Education",
+	"Game",
+	"Graphics",
+	"Network",
+	"Office",
+	"Science",
+	"Settings",
+	"System",
+	"Utility"
+};
+
+static void call(const char* name, int dir, int symlink, void* user){
+	opaque_t* opaque = user;
+	int c = C_UNKNOWN;
+
+	opaque->name = NULL;
+	opaque->category = NULL;
+	ini_parse(name, dumper, user);
+
+	if(opaque->category != NULL){
+		char* str = opaque->category;
+
+		while(str != NULL){
+			char* s = strchr(str, ';');
+
+			if(s != NULL){
+				s[0] = 0;
+			}
+
+			if(strcasecmp(str, "AudioVideo") == 0){
+				c = C_AUDIOVIDEO;
+			}else if(strcasecmp(str, "Audio") == 0){
+				c = C_AUDIO;
+			}else if(strcasecmp(str, "Video") == 0){
+				c = C_VIDEO;
+			}else if(strcasecmp(str, "Development") == 0){
+				c = C_DEVELOPMENT;
+			}else if(strcasecmp(str, "Education") == 0){
+				c = C_EDUCATION;
+			}else if(strcasecmp(str, "Game") == 0){
+				c = C_GAME;
+			}else if(strcasecmp(str, "Graphics") == 0){
+				c = C_GRAPHICS;
+			}else if(strcasecmp(str, "Network") == 0){
+				c = C_NETWORK;
+			}else if(strcasecmp(str, "Office") == 0){
+				c = C_OFFICE;
+			}else if(strcasecmp(str, "Science") == 0){
+				c = C_SCIENCE;
+			}else if(strcasecmp(str, "Settings") == 0){
+				c = C_SETTINGS;
+			}else if(strcasecmp(str, "System") == 0){
+				c = C_SYSTEM;
+			}else if(strcasecmp(str, "Utility") == 0){
+				c = C_UTILITY;
+			}
+
+			str = s;
+			if(str != NULL) str++;
+		}
+
+		free(opaque->category);
+	}
+
+	if(opaque->name != NULL){
+		int i;
+		MwMenu mc = NULL, m;
+		for(i = 0; i < arrlen(opaque->menu->sub); i++){
+			if(strcmp(opaque->menu->sub[i]->name, category_mapping[c]) == 0){
+				mc = opaque->menu->sub[i];
+				break;
+			}
+		}
+		if(mc == NULL){
+			mc = malloc(sizeof(*mc));
+			mc->name = (char*)category_mapping[c];
+			mc->keep = 0;
+			mc->sub = NULL;
+			mc->wsub = NULL;
+
+			arrput(opaque->menu->sub, mc);
+		}
+
+		for(i = 0; i < arrlen(mc->sub); i++){
+			if(strcmp(mc->sub[i]->name, opaque->name) == 0){
+				break;
+			}
+		}
+
+		if(i == arrlen(mc->sub)){
+			m = malloc(sizeof(*m));
+			m->name = opaque->name;
+			m->keep = 0;
+			m->sub = NULL;
+			m->wsub = NULL;
+
+			arrput(mc->sub, m);
+		}
+	}
+}
 
 static void menu(MwWidget handle, void* user, void* client) {
 	opaque_t* opaque = handle->opaque;
@@ -59,6 +204,10 @@ static void activate(MwWidget handle, void* user, void* client) {
 	}
 }
 
+int sort_alphabet(const void* a, const void* b){
+	return strcmp((*((MwMenu*)a))->name, (*((MwMenu*)b))->name);
+}
+
 void module(MwWidget box, config_setting_t* setting) {
 	MwLLPixmap     closed = NULL;
 	MwLLPixmap     opened = NULL;
@@ -68,6 +217,7 @@ void module(MwWidget box, config_setting_t* setting) {
 	unsigned char* rgb;
 	opaque_t*      opaque = malloc(sizeof(*opaque));
 	MwMenu	       m;
+	int i;
 
 	if((rgb = stbi_load(ICON64DIR "/logo.png", &w, &h, &ch, 4)) != NULL) {
 		int	       bw   = MwGetInteger(box, MwNheight) - MwDefaultBorderWidth(box) * 2;
@@ -131,14 +281,12 @@ void module(MwWidget box, config_setting_t* setting) {
 	opaque->menu->wsub = NULL;
 	opaque->menu->sub  = NULL;
 
-	int i;
-	for(i = 0; i < 5; i++) {
-		m	= malloc(sizeof(*m));
-		m->name = MwStringDuplicate("Test");
-		m->keep = 0;
-		m->wsub = NULL;
-		m->sub	= NULL;
-		arrput(opaque->menu->sub, m);
+	MDEDirectoryScan(DATAROOTDIR "/applications", call, opaque);
+	MDEDirectoryScan("/usr/share/applications", call, opaque);
+	qsort(opaque->menu->sub, arrlen(opaque->menu->sub), sizeof(MwMenu), sort_alphabet);
+
+	for(i = 0; i < arrlen(opaque->menu->sub); i++){
+		qsort(opaque->menu->sub[i]->sub, arrlen(opaque->menu->sub[i]->sub), sizeof(MwMenu), sort_alphabet);
 	}
 
 	btn->opaque = opaque;
