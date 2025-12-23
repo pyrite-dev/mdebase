@@ -451,6 +451,7 @@ void loop_x(void) {
 			int		  i;
 			int		  ret = 0;
 			XWindowAttributes xwa;
+			XConfigureEvent	  ev2;
 
 			if(!XGetWindowAttributes(xdisplay, ev.xmaprequest.window, &xwa)) continue;
 			/* ?? ? ? ???? ?? ? ? */
@@ -476,6 +477,15 @@ void loop_x(void) {
 					continue;
 				}
 
+				ev2.type    = ConfigureNotify;
+				ev2.display = xdisplay;
+				ev2.event   = windows[i].client;
+				ev2.x	    = xwa.x + wm_content_x();
+				ev2.y	    = xwa.y + wm_content_y();
+				ev2.width   = xwa.width;
+				ev2.height  = xwa.height;
+				XSendEvent(xdisplay, windows[i].client, False, StructureNotifyMask, (XEvent*)&ev2);
+
 				XMoveWindow(xdisplay, ev.xmaprequest.window, xwa.x, xwa.y);
 				XMapWindow(xdisplay, ev.xmaprequest.window);
 				do {
@@ -492,6 +502,7 @@ void loop_x(void) {
 				XUngrabServer(xdisplay);
 				XMapWindow(xdisplay, windows[i].client);
 				set_focus(windows[i].client);
+
 				continue;
 			}
 
@@ -543,16 +554,6 @@ void loop_x(void) {
 				w.working = 1;
 				save(w.client);
 				arrput(windows, w);
-
-				XConfigureEvent	  ev2;
-				ev2.type    = ConfigureNotify;
-				ev2.display = xdisplay;
-				ev2.event   = w.client;
-				ev2.x	    = xwa.x + wm_content_x();
-				ev2.y	    = xwa.y + wm_content_y();
-				ev2.width   = xwa.width;
-				ev2.height  = xwa.height;
-				XSendEvent(xdisplay, w.client, False, StructureNotifyMask, (XEvent*)&ev2);
 			}
 		} else if(ev.type == UnmapNotify) {
 			int i;
