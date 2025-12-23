@@ -378,12 +378,23 @@ void loop_x(void) {
 			Window	       w = ev.xconfigurerequest.window;
 			for(i = 0; i < arrlen(windows); i++) {
 				if(windows[i].frame->lowlevel->x11.window == w) {
+					XConfigureEvent ev2;
+
 					xwc.x	   = wm_content_x();
 					xwc.y	   = wm_content_y();
 					xwc.width  = wm_content_width(ev.xconfigurerequest.width);
 					xwc.height = wm_content_height(ev.xconfigurerequest.height);
 
 					XConfigureWindow(xdisplay, windows[i].client, CWX | CWY | CWWidth | CWHeight, &xwc);
+
+					ev2.type    = ConfigureNotify;
+					ev2.display = xdisplay;
+					ev2.event   = windows[i].client;
+					ev2.x	    = ev.xconfigurerequest.x + wm_content_x();
+					ev2.y	    = ev.xconfigurerequest.y + wm_content_y();
+					ev2.width   = xwc.width;
+					ev2.height  = xwc.height;
+					XSendEvent(xdisplay, windows[i].client, False, StructureNotifyMask, (XEvent*)&ev2);
 					break;
 				}
 			}
@@ -459,6 +470,7 @@ void loop_x(void) {
 			if(ret) continue;
 			if(i != arrlen(windows)) {
 				XWindowAttributes xwa;
+				XConfigureEvent	  ev2;
 				if(!XGetWindowAttributes(xdisplay, windows[i].client, &xwa)) {
 					wm_destroy(windows[i].frame);
 					arrdel(windows, i);
@@ -478,6 +490,16 @@ void loop_x(void) {
 					arrdel(windows, i);
 					continue;
 				}
+
+				ev2.type    = ConfigureNotify;
+				ev2.display = xdisplay;
+				ev2.event   = windows[i].client;
+				ev2.x	    = xwa.x + wm_content_x();
+				ev2.y	    = xwa.y + wm_content_y();
+				ev2.width   = xwa.width;
+				ev2.height  = xwa.height;
+				XSendEvent(xdisplay, windows[i].client, False, StructureNotifyMask, (XEvent*)&ev2);
+
 				XUngrabServer(xdisplay);
 				XMapWindow(xdisplay, windows[i].client);
 				set_focus(windows[i].client);
