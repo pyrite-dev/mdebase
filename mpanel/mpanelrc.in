@@ -9,6 +9,7 @@
 				<Application Name="Applications" />
 				<Separator />
 				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name=""></Execute>
 			</Menu>
 		</StartButton>
 	

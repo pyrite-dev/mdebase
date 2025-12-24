@@ -410,7 +410,13 @@ void loop_x(void) {
 				}
 			}
 
-			if(w != None) XRaiseWindow(xdisplay, w);
+			if(w == None) {
+				XRaiseWindow(xdisplay, t);
+
+				set_focus(t);
+			} else {
+				XRaiseWindow(xdisplay, w);
+			}
 
 			XAllowEvents(xdisplay, ReplayPointer, CurrentTime);
 		} else if(ev.type == MotionNotify && ev.xmotion.subwindow != None) {
@@ -522,6 +528,8 @@ void loop_x(void) {
 				arrput(windows, w);
 
 				XMapWindow(xdisplay, ev.xmaprequest.window);
+
+				if(!xwa.override_redirect) save(ev.xmaprequest.window);
 				continue;
 			}
 
