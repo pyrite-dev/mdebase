@@ -6,7 +6,7 @@
 #define _MILSKO
 #include <MDE/Foundation.h>
 #include <Mw/Milsko.h>
-#include <libconfig.h>
+#include <xemil.h>
 #include <ini.h>
 
 #include <stdlib.h>
@@ -132,9 +132,9 @@ static void call(const char* name, int dir, int symlink, void* user) {
 	if(opaque->name != NULL) {
 		int    i;
 		MwMenu mc = NULL, m;
-		for(i = 0; i < arrlen(opaque->menu->sub); i++) {
-			if(strcmp(opaque->menu->sub[i]->name, category_mapping[c]) == 0) {
-				mc = opaque->menu->sub[i];
+		for(i = 0; i < arrlen(opaque->menu->sub[0]->sub); i++) {
+			if(strcmp(opaque->menu->sub[0]->sub[i]->name, category_mapping[c]) == 0) {
+				mc = opaque->menu->sub[0]->sub[i];
 				break;
 			}
 		}
@@ -145,7 +145,7 @@ static void call(const char* name, int dir, int symlink, void* user) {
 			mc->sub	 = NULL;
 			mc->wsub = NULL;
 
-			arrput(opaque->menu->sub, mc);
+			arrput(opaque->menu->sub[0]->sub, mc);
 		}
 
 		for(i = 0; i < arrlen(mc->sub); i++) {
@@ -275,7 +275,7 @@ int sort_alphabet(const void* a, const void* b) {
 	return strcmp((*((MwMenu*)a))->name, (*((MwMenu*)b))->name);
 }
 
-void module(MwWidget box, config_setting_t* setting) {
+void module(MwWidget box, xl_node_t* node) {
 	MwLLPixmap     closed = NULL;
 	MwLLPixmap     opened = NULL;
 	MwWidget       btn;
@@ -348,15 +348,25 @@ void module(MwWidget box, config_setting_t* setting) {
 	opaque->menu->wsub = NULL;
 	opaque->menu->sub  = NULL;
 
+	m	= malloc(sizeof(*m));
+	m->name = MwStringDuplicate("Applications");
+	m->keep = 0;
+	m->wsub = NULL;
+	m->sub	= NULL;
+
+	arrput(opaque->menu->sub, m);
+
 	MDEDirectoryScan(DATAROOTDIR "/applications", call, opaque);
 	MDEDirectoryScan("/usr/share/applications", call, opaque);
 #if defined(__NetBSD__)
 	MDEDirectoryScan("/usr/pkg/share/applications", call, opaque);
 #endif
-	qsort(opaque->menu->sub, arrlen(opaque->menu->sub), sizeof(MwMenu), sort_alphabet);
 
-	for(i = 0; i < arrlen(opaque->menu->sub); i++) {
-		qsort(opaque->menu->sub[i]->sub, arrlen(opaque->menu->sub[i]->sub), sizeof(MwMenu), sort_alphabet);
+	if(arrlen(opaque->menu->sub[0]->sub) > 0) {
+		qsort(opaque->menu->sub[0]->sub, arrlen(opaque->menu->sub[0]->sub), sizeof(MwMenu), sort_alphabet);
+		for(i = 0; i < arrlen(opaque->menu->sub[0]->sub); i++) {
+			qsort(opaque->menu->sub[0]->sub[i]->sub, arrlen(opaque->menu->sub[0]->sub[i]->sub), sizeof(MwMenu), sort_alphabet);
+		}
 	}
 
 	btn->opaque = opaque;

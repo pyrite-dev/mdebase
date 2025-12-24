@@ -1,17 +1,10 @@
-Modules: (
-	{
-		Type = "StartButton";
-	},
-	{
-		Type = "Separator";
-	},
-	{
-		Type = "TaskBar";
-	},
-	{
-		Type = "Separator";
-	},
-	{
-		Type = "Time";
-	}
-);
+<?xml version="1.0"?>
+<Modules>
+	<Module Type="StartButton">
+	</Module>
+	<Module Type="Separator" />
+	<Module Type="TaskBar">
+	</Module>
+	<Module Type="Separator" />
+	<Module Type="Time" />
+</Modules>

@@ -1,5 +1,5 @@
 #include <Mw/Milsko.h>
-#include <libconfig.h>
+#include <xemil.h>
 
 #include <time.h>
 #include <string.h>
@@ -54,7 +54,7 @@ static void tick(MwWidget handle, void* user, void* client) {
 	free(children);
 }
 
-void module(MwWidget box, config_setting_t* setting) {
+void module(MwWidget box, xl_node_t* node) {
 	MwWidget b    = MwVaCreateWidget(MwBoxClass, "time", box, 0, 0, 0, 0,
 					 MwNfixedSize, 64,
 					 MwNbackground, "#bebdb2",

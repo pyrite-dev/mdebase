@@ -2,7 +2,11 @@ include(MDEBase)
 include(MDEPkgConfig)
 mde_setup_project(mpanel ${CMAKE_INSTALL_BINDIR})
 
-mde_pkg_config_add(mpanel libconfig)
+target_link_libraries(
+	mpanel
+	PRIVATE
+	xemil
+)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL Linux)
 	target_link_libraries(

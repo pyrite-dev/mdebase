@@ -2,5 +2,8 @@ include(MDEBase)
 include(MDEPkgConfig)
 mde_setup_library(TimeModule ${CMAKE_INSTALL_LIBDIR}/mpanel)
 
-mde_pkg_config_add(TimeModule libconfig)
-
+target_link_libraries(
+	TimeModule
+	PRIVATE
+	xemil
+)

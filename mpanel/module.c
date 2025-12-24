@@ -1,52 +1,73 @@
 #include "mpanel.h"
 
-static void read_config(config_t* cfg, const char* path) {
-	if(!config_read_file(cfg, path)) {
-		fprintf(stderr, "MPanel config error: file %s at line %d: %s\n", path, config_error_line(cfg), config_error_text(cfg));
+static void read_config(xemil_t** cfg, const char* path) {
+	xemil_t* tmp;
+
+	if((tmp = xl_open_file(path)) == NULL || !xl_parse(tmp)) {
+		fprintf(stderr, "MPanel config error: file %s\n", path);
+		if(tmp != NULL) xl_close(tmp);
+	} else {
+		if((*cfg) != NULL) xl_close(*cfg);
+
+		*cfg = tmp;
 	}
 }
 
 void load_modules(void) {
-	config_t	  cfg;
-	config_setting_t* s;
-	char*		  conf = MDEDirectoryConfigPath();
-	char*		  dir  = MwDirectoryJoin(conf, "mpanel");
-	char*		  path = MwDirectoryJoin(dir, "mpanelrc");
+	xemil_t* cfg  = NULL;
+	char*	 conf = MDEDirectoryConfigPath();
+	char*	 dir  = MwDirectoryJoin(conf, "mpanel");
+	char*	 path = MwDirectoryJoin(dir, "mpanelrc");
 
 	free(dir);
 	free(conf);
 
-	config_init(&cfg);
-	config_clear(&cfg);
 	read_config(&cfg, SYSCONFDIR "/mpanel/mpanelrc");
 	read_config(&cfg, path);
 
 	free(path);
 
-	if((s = config_lookup(&cfg, "Modules")) != NULL && (config_setting_type(s) == CONFIG_TYPE_LIST || config_setting_type(s) == CONFIG_TYPE_ARRAY)) {
-		int		  i = 0;
-		config_setting_t* c;
-		while((c = config_setting_get_elem(s, i)) != NULL) {
-			config_setting_t* type;
-			if(config_setting_type(c) == CONFIG_TYPE_GROUP && (type = config_setting_lookup(c, "Type")) != NULL && config_setting_type(type) == CONFIG_TYPE_STRING) {
-				char* p;
-				void* lib;
+	if(cfg != NULL && cfg->root != NULL) {
+		xl_node_t* n = cfg->root->first_child;
+		if(strcmp(cfg->root->name, "Modules") != 0) {
+			fprintf(stderr, "MPanel config error: Root element has to be Modules\n");
+			return;
+		}
 
-				dir = MDEStringConcatenate(LIBDIR "/mpanel/lib", config_setting_get_string(type));
-				p   = MDEStringConcatenate(dir, "Module.so");
-				free(dir);
+		while(n != NULL) {
+			if(n->type == XL_NODE_NODE && strcmp(n->name, "Module") == 0) {
+				char*		type = NULL;
+				xl_attribute_t* attr = n->first_attribute;
 
-				if((lib = dlopen(p, RTLD_LOCAL | RTLD_LAZY)) != NULL) {
-					void (*call)(MwWidget box, config_setting_t* setting) = dlsym(lib, "module");
+				while(attr != NULL) {
+					if(strcmp(attr->key, "Type") == 0) {
+						type = attr->value;
+					}
 
-					call(box, c);
+					attr = attr->next;
 				}
 
-				free(p);
-			}
-			i++;
-		}
-	}
+				if(type != NULL) {
+					char* p	  = MDEStringConcatenate("lib", type);
+					char* p2  = MDEStringConcatenate(p, "Module.so");
+					char* s	  = MwDirectoryJoin(LIBDIR "/mpanel", p2);
+					void* lib = dlopen(s, RTLD_LAZY | RTLD_LOCAL);
 
-	config_destroy(&cfg);
+					if(lib != NULL) {
+						void (*module)(MwWidget box, xl_node_t* node) = dlsym(lib, "module");
+
+						if(module != NULL) module(box, n);
+					}
+
+					free(s);
+					free(p2);
+					free(p);
+				}
+			}
+
+			n = n->next;
+		}
+
+		xl_close(cfg);
+	}
 }

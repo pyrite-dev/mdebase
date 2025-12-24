@@ -8,7 +8,7 @@
 #include <Mw/Milsko.h>
 
 /* External */
-#include <libconfig.h>
+#include <xemil.h>
 
 /* Standard */
 #include <dlfcn.h>
