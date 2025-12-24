@@ -5,6 +5,33 @@
 #include <stb_ds.h>
 #include <stb_image.h>
 
+typedef struct mwm_hints {
+	unsigned long flags;
+	unsigned long functions;
+	unsigned long decorations;
+	long	      input_mode;
+	unsigned long status;
+} mwm_hints_t;
+enum mwm_hints_enum {
+	MWM_HINTS_FUNCTIONS   = (1L << 0),
+	MWM_HINTS_DECORATIONS = (1L << 1),
+
+	MWM_FUNC_ALL	  = (1L << 0),
+	MWM_FUNC_RESIZE	  = (1L << 1),
+	MWM_FUNC_MOVE	  = (1L << 2),
+	MWM_FUNC_MINIMIZE = (1L << 3),
+	MWM_FUNC_MAXIMIZE = (1L << 4),
+	MWM_FUNC_CLOSE	  = (1L << 5),
+
+	MWM_DECOR_ALL	   = (1L << 0),
+	MWM_DECOR_BORDER   = (1L << 1),
+	MWM_DECOR_RESIZEH  = (1L << 2),
+	MWM_DECOR_TITLE	   = (1L << 3),
+	MWM_DECOR_MENU	   = (1L << 4),
+	MWM_DECOR_MINIMIZE = (1L << 5),
+	MWM_DECOR_MAXIMIZE = (1L << 6)
+};
+
 Display*	xdisplay;
 pthread_t	xthread;
 pthread_mutex_t xmutex;
@@ -57,29 +84,30 @@ static void* x11_thread_routine(void* arg) {
 }
 
 static Window focus = None, nofocus;
-static void   set_focus(Window w) {
-	  int i;
-	  for(i = 0; i < arrlen(windows); i++) {
-		  pthread_mutex_lock(&focusmutex);
-		  if(windows[i].client == w) {
-			  pthread_mutex_unlock(&focusmutex);
-			  wm_focus(windows[i].frame, 1);
-		  } else if(focus != w && focus == windows[i].client) {
-			  pthread_mutex_unlock(&focusmutex);
-			  wm_focus(windows[i].frame, 0);
-		  } else {
-			  pthread_mutex_unlock(&focusmutex);
-		  }
-	  }
 
-	  pthread_mutex_lock(&focusmutex);
-	  focus = w;
-	  if(w == None) {
-		  XSetInputFocus(xdisplay, nofocus, RevertToParent, CurrentTime);
-	  } else {
-		  XSetInputFocus(xdisplay, w, RevertToParent, CurrentTime);
-	  }
-	  pthread_mutex_unlock(&focusmutex);
+static void set_focus(Window w) {
+	int i;
+	for(i = 0; i < arrlen(windows); i++) {
+		pthread_mutex_lock(&focusmutex);
+		if(windows[i].frame != NULL && windows[i].client == w) {
+			pthread_mutex_unlock(&focusmutex);
+			wm_focus(windows[i].frame, 1);
+		} else if(windows[i].frame != NULL && focus != w && focus == windows[i].client) {
+			pthread_mutex_unlock(&focusmutex);
+			wm_focus(windows[i].frame, 0);
+		} else {
+			pthread_mutex_unlock(&focusmutex);
+		}
+	}
+
+	pthread_mutex_lock(&focusmutex);
+	focus = w;
+	if(w == None) {
+		XSetInputFocus(xdisplay, nofocus, RevertToParent, CurrentTime);
+	} else {
+		XSetInputFocus(xdisplay, w, RevertToParent, CurrentTime);
+	}
+	pthread_mutex_unlock(&focusmutex);
 }
 
 static unsigned long generate_color(int r, int g, int b) {
@@ -304,6 +332,36 @@ static void set_name(Window wnd) {
 	}
 }
 
+static int is_no_border(Window window) {
+	Atom	       atom = XInternAtom(xdisplay, "_MOTIF_WM_HINTS", False);
+	Atom	       type;
+	int	       format;
+	unsigned long  nitem, after;
+	unsigned char* buf = NULL;
+	mwm_hints_t*   mwm;
+
+	if(XGetWindowProperty(xdisplay, window, atom, 0, sizeof(*mwm) / sizeof(long), False, AnyPropertyType, &type, &format, &nitem, &after, &buf) == Success && buf != NULL) {
+		if(type == atom && nitem == (sizeof(*mwm) / sizeof(long))) {
+			mwm = (mwm_hints_t*)buf;
+
+			if(mwm->flags & MWM_HINTS_DECORATIONS) {
+				if(mwm->decorations == 0) {
+					XFree(buf);
+
+					return 1;
+				}
+			} else {
+				XFree(buf);
+
+				return 1;
+			}
+		}
+		XFree(buf);
+	}
+
+	return 0;
+}
+
 void loop_x(void) {
 	XEvent	     ev;
 	Window	     root, parent;
@@ -320,7 +378,7 @@ void loop_x(void) {
 			XWindowAttributes xwa;
 
 			if(XGetWindowAttributes(xdisplay, children[i], &xwa)) {
-				if(xwa.override_redirect || xwa.map_state != IsViewable) continue;
+				if(xwa.override_redirect || xwa.map_state != IsViewable || is_no_border(children[i])) continue;
 
 				w.frame	 = wm_frame(xwa.width, xwa.height);
 				w.client = children[i];
@@ -344,7 +402,7 @@ void loop_x(void) {
 			if(ev.xbutton.subwindow != None) t = ev.xbutton.subwindow;
 			if(ev.type == ButtonPress) {
 				for(i = 0; i < arrlen(windows); i++) {
-					if(windows[i].frame->lowlevel->x11.window == t || parent_eq(t, windows[i].frame->lowlevel->x11.window)) {
+					if(windows[i].frame != NULL && (windows[i].frame->lowlevel->x11.window == t || parent_eq(t, windows[i].frame->lowlevel->x11.window))) {
 						set_focus(windows[i].client);
 						w = windows[i].frame->lowlevel->x11.window;
 						break;
@@ -377,7 +435,7 @@ void loop_x(void) {
 			int	       i;
 			Window	       w = ev.xconfigurerequest.window;
 			for(i = 0; i < arrlen(windows); i++) {
-				if(windows[i].frame->lowlevel->x11.window == w) {
+				if(windows[i].frame != NULL && windows[i].frame->lowlevel->x11.window == w) {
 					XConfigureEvent ev2;
 
 					xwc.x	   = wm_content_x();
@@ -408,7 +466,7 @@ void loop_x(void) {
 		} else if(ev.type == ConfigureNotify) {
 			int i;
 			for(i = 0; i < arrlen(windows); i++) {
-				if(windows[i].client == ev.xconfigure.window) {
+				if(windows[i].frame != NULL && windows[i].client == ev.xconfigure.window) {
 					XWindowChanges	  xwc;
 					XWindowAttributes xwa;
 
@@ -435,12 +493,14 @@ void loop_x(void) {
 		} else if(ev.type == CreateNotify) {
 			XWindowAttributes xwa;
 
-			XGetWindowAttributes(xdisplay, DefaultRootWindow(xdisplay), &xwa);
+			if(!ev.xcreatewindow.override_redirect) {
+				XGetWindowAttributes(xdisplay, DefaultRootWindow(xdisplay), &xwa);
 
-			XMoveWindow(xdisplay, ev.xcreatewindow.window, rand() % (xwa.width - wm_entire_width(ev.xcreatewindow.width)), rand() % (xwa.height - wm_entire_height(ev.xcreatewindow.height)));
+				XMoveWindow(xdisplay, ev.xcreatewindow.window, rand() % (xwa.width - wm_entire_width(ev.xcreatewindow.width)), rand() % (xwa.height - wm_entire_height(ev.xcreatewindow.height)));
+			}
 		} else if(ev.type == DestroyNotify) {
 			for(i = 0; i < arrlen(windows); i++) {
-				if(windows[i].client == ev.xdestroywindow.window) {
+				if(windows[i].frame != NULL && windows[i].client == ev.xdestroywindow.window) {
 					wm_destroy(windows[i].frame);
 					arrdel(windows, i);
 					break;
@@ -455,13 +515,18 @@ void loop_x(void) {
 
 			if(!XGetWindowAttributes(xdisplay, ev.xmaprequest.window, &xwa)) continue;
 			/* ?? ? ? ???? ?? ? ? */
-			if(xwa.override_redirect) {
+			if(xwa.override_redirect || is_no_border(ev.xmaprequest.window)) {
+				w.frame	  = NULL;
+				w.client  = ev.xmaprequest.window;
+				w.working = 1;
+				arrput(windows, w);
+
 				XMapWindow(xdisplay, ev.xmaprequest.window);
 				continue;
 			}
 
 			for(i = 0; i < arrlen(windows); i++) {
-				if(windows[i].frame->lowlevel->x11.window == ev.xmaprequest.window) break;
+				if(windows[i].frame != NULL && windows[i].frame->lowlevel->x11.window == ev.xmaprequest.window) break;
 				if(windows[i].client == ev.xmaprequest.window) {
 					/* what? */
 					ret = 1;
@@ -509,6 +574,7 @@ void loop_x(void) {
 			w.frame	  = wm_frame(xwa.width, xwa.height);
 			w.client  = ev.xmaprequest.window;
 			w.working = 1;
+
 			save(w.client);
 
 			if(ret) {
@@ -537,8 +603,9 @@ void loop_x(void) {
 			for(i = 0; i < arrlen(windows); i++) {
 				if(windows[i].client == ev.xmap.window) {
 					windows[i].working = 0;
+
 					break;
-				} else if(windows[i].frame->lowlevel->x11.window == ev.xmap.window || nofocus == ev.xmap.window) {
+				} else if(windows[i].frame != NULL && (windows[i].frame->lowlevel->x11.window == ev.xmap.window || nofocus == ev.xmap.window)) {
 					break;
 				}
 			}
@@ -575,11 +642,14 @@ void loop_x(void) {
 
 					x = xwa.x;
 					y = xwa.y;
-					if(XGetWindowAttributes(xdisplay, windows[i].frame->lowlevel->x11.window, &xwa)) {
-						XReparentWindow(xdisplay, windows[i].client, DefaultRootWindow(xdisplay), xwa.x + x, xwa.y + y);
-					}
 
-					wm_destroy(windows[i].frame);
+					if(windows[i].frame != NULL) {
+						if(XGetWindowAttributes(xdisplay, windows[i].frame->lowlevel->x11.window, &xwa)) {
+							XReparentWindow(xdisplay, windows[i].client, DefaultRootWindow(xdisplay), xwa.x + x, xwa.y + y);
+						}
+
+						wm_destroy(windows[i].frame);
+					}
 					arrdel(windows, i);
 					break;
 				}
