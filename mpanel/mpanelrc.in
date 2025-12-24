@@ -1,10 +1,21 @@
 <?xml version="1.0"?>
-<Modules>
-	<Module Type="StartButton">
+<Panel>
+	<Module>
+		<StartButton>
+			<Menu>
+				<Application Name="Applications" />
+				<Separator />
+				<Execute Name="Terminal">xterm</Execute>
+			</Menu>
+		</StartButton>
+	
+		<Separator />
+	
+		<TaskBar>
+		</TaskBar>
+	
+		<Separator />
+	
+		<Time />
 	</Module>
-	<Module Type="Separator" />
-	<Module Type="TaskBar">
-	</Module>
-	<Module Type="Separator" />
-	<Module Type="Time" />
-</Modules>
+</Panel>

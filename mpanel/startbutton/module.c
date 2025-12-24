@@ -21,6 +21,7 @@ typedef struct opaque {
 	MwWidget   submenu;
 	int	   is_opened;
 	MwMenu	   menu;
+	MwMenu	   current;
 
 	char* name;
 	char* category;
@@ -132,9 +133,9 @@ static void call(const char* name, int dir, int symlink, void* user) {
 	if(opaque->name != NULL) {
 		int    i;
 		MwMenu mc = NULL, m;
-		for(i = 0; i < arrlen(opaque->menu->sub[0]->sub); i++) {
-			if(strcmp(opaque->menu->sub[0]->sub[i]->name, category_mapping[c]) == 0) {
-				mc = opaque->menu->sub[0]->sub[i];
+		for(i = 0; i < arrlen(opaque->current->sub); i++) {
+			if(strcmp(opaque->current->sub[i]->name, category_mapping[c]) == 0) {
+				mc = opaque->current->sub[i];
 				break;
 			}
 		}
@@ -145,7 +146,7 @@ static void call(const char* name, int dir, int symlink, void* user) {
 			mc->sub	 = NULL;
 			mc->wsub = NULL;
 
-			arrput(opaque->menu->sub[0]->sub, mc);
+			arrput(opaque->current->sub, mc);
 		}
 
 		for(i = 0; i < arrlen(mc->sub); i++) {
@@ -271,8 +272,64 @@ static void activate(MwWidget handle, void* user, void* client) {
 	}
 }
 
-int sort_alphabet(const void* a, const void* b) {
+static int sort_alphabet(const void* a, const void* b) {
 	return strcmp((*((MwMenu*)a))->name, (*((MwMenu*)b))->name);
+}
+
+static char* node_get_name(xl_node_t* node) {
+	xl_attribute_t* a = node->first_attribute;
+
+	while(a != NULL) {
+		if(strcmp(a->key, "Name") == 0) return a->value;
+
+		a = a->next;
+	}
+
+	return NULL;
+}
+
+static void menu_scan(opaque_t* opaque, xl_node_t* node) {
+	xl_node_t* n = node->first_child;
+
+	while(n != NULL) {
+		char*  name = node_get_name(n);
+		MwMenu m    = NULL;
+
+		if(n->type == XL_NODE_NODE && strcmp(n->name, "Application") == 0 && name != NULL) {
+			m	= malloc(sizeof(*m));
+			m->name = MwStringDuplicate(name);
+			m->keep = 0;
+			m->wsub = NULL;
+			m->sub	= NULL;
+
+			opaque->current = m;
+
+			MDEDirectoryScan(DATAROOTDIR "/applications", call, opaque);
+			MDEDirectoryScan("/usr/share/applications", call, opaque);
+#if defined(__NetBSD__)
+			MDEDirectoryScan("/usr/pkg/share/applications", call, opaque);
+#endif
+		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "Separator") == 0) {
+			m	= malloc(sizeof(*m));
+			m->name = MwStringDuplicate("----");
+			m->keep = 0;
+			m->wsub = NULL;
+			m->sub	= NULL;
+		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "Execute") == 0 && name != NULL) {
+			m	  = malloc(sizeof(*m));
+			m->name	  = MwStringDuplicate(name);
+			m->keep	  = 0;
+			m->wsub	  = NULL;
+			m->sub	  = NULL;
+			m->opaque = MwStringDuplicate(n->text == NULL ? "" : n->text);
+		}
+
+		if(m != NULL) {
+			arrput(opaque->menu->sub, m);
+		}
+
+		n = n->next;
+	}
 }
 
 void module(MwWidget box, xl_node_t* node) {
@@ -283,8 +340,8 @@ void module(MwWidget box, xl_node_t* node) {
 	unsigned int   ch;
 	unsigned char* rgb;
 	opaque_t*      opaque = malloc(sizeof(*opaque));
-	MwMenu	       m;
 	int	       i;
+	xl_node_t*     n;
 
 	if((rgb = stbi_load(ICON64DIR "/logo.png", &w, &h, &ch, 4)) != NULL) {
 		int	       bw   = MwGetInteger(box, MwNheight) - MwDefaultBorderWidth(box) * 2;
@@ -348,19 +405,15 @@ void module(MwWidget box, xl_node_t* node) {
 	opaque->menu->wsub = NULL;
 	opaque->menu->sub  = NULL;
 
-	m	= malloc(sizeof(*m));
-	m->name = MwStringDuplicate("Applications");
-	m->keep = 0;
-	m->wsub = NULL;
-	m->sub	= NULL;
+	n = node->first_child;
 
-	arrput(opaque->menu->sub, m);
+	while(n != NULL) {
+		if(n->type == XL_NODE_NODE && strcmp(n->name, "Menu") == 0) {
+			menu_scan(opaque, n);
+		}
 
-	MDEDirectoryScan(DATAROOTDIR "/applications", call, opaque);
-	MDEDirectoryScan("/usr/share/applications", call, opaque);
-#if defined(__NetBSD__)
-	MDEDirectoryScan("/usr/pkg/share/applications", call, opaque);
-#endif
+		n = n->next;
+	}
 
 	if(arrlen(opaque->menu->sub[0]->sub) > 0) {
 		qsort(opaque->menu->sub[0]->sub, arrlen(opaque->menu->sub[0]->sub), sizeof(MwMenu), sort_alphabet);

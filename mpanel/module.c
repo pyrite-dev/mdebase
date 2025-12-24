@@ -13,6 +13,31 @@ static void read_config(xemil_t** cfg, const char* path) {
 	}
 }
 
+static void module_scan(xl_node_t* node) {
+	xl_node_t* n = node->first_child;
+
+	while(n != NULL) {
+		if(n->type == XL_NODE_NODE) {
+			char* p	  = MDEStringConcatenate("lib", n->name);
+			char* p2  = MDEStringConcatenate(p, "Module.so");
+			char* s	  = MwDirectoryJoin(LIBDIR "/mpanel", p2);
+			void* lib = dlopen(s, RTLD_LAZY | RTLD_LOCAL);
+
+			if(lib != NULL) {
+				void (*module)(MwWidget box, xl_node_t* node) = dlsym(lib, "module");
+
+				if(module != NULL) module(box, n);
+			}
+
+			free(s);
+			free(p2);
+			free(p);
+		}
+
+		n = n->next;
+	}
+}
+
 void load_modules(void) {
 	xemil_t* cfg  = NULL;
 	char*	 conf = MDEDirectoryConfigPath();
@@ -29,40 +54,14 @@ void load_modules(void) {
 
 	if(cfg != NULL && cfg->root != NULL) {
 		xl_node_t* n = cfg->root->first_child;
-		if(strcmp(cfg->root->name, "Modules") != 0) {
-			fprintf(stderr, "MPanel config error: Root element has to be Modules\n");
+		if(strcmp(cfg->root->name, "Panel") != 0) {
+			fprintf(stderr, "MPanel config error: Root element has to be Panel\n");
 			return;
 		}
 
 		while(n != NULL) {
 			if(n->type == XL_NODE_NODE && strcmp(n->name, "Module") == 0) {
-				char*		type = NULL;
-				xl_attribute_t* attr = n->first_attribute;
-
-				while(attr != NULL) {
-					if(strcmp(attr->key, "Type") == 0) {
-						type = attr->value;
-					}
-
-					attr = attr->next;
-				}
-
-				if(type != NULL) {
-					char* p	  = MDEStringConcatenate("lib", type);
-					char* p2  = MDEStringConcatenate(p, "Module.so");
-					char* s	  = MwDirectoryJoin(LIBDIR "/mpanel", p2);
-					void* lib = dlopen(s, RTLD_LAZY | RTLD_LOCAL);
-
-					if(lib != NULL) {
-						void (*module)(MwWidget box, xl_node_t* node) = dlsym(lib, "module");
-
-						if(module != NULL) module(box, n);
-					}
-
-					free(s);
-					free(p2);
-					free(p);
-				}
+				module_scan(n);
 			}
 
 			n = n->next;
