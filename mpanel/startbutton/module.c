@@ -23,6 +23,9 @@ typedef struct opaque {
 	MwMenu	   menu;
 	MwMenu	   current;
 
+	MwLLPixmap stripe;
+	char*	   stripe_color;
+
 	char* name;
 	char* category;
 	char* exec;
@@ -250,14 +253,28 @@ static void activate(MwWidget handle, void* user, void* client) {
 
 	opaque->is_opened = opaque->is_opened ? 0 : 1;
 	if(opaque->is_opened) {
-		MwPoint p;
+		MwPoint	 p;
+		MwWidget fill, image;
+		MwRect	 rc;
 
 		MwVaApply(handle,
 			  MwNpixmap, opaque->opened,
 			  MwNforceInverted, 1,
 			  NULL);
 
-		opaque->submenu = MwCreateWidget(MwSubMenuClass, "submenu", handle, 0, MwGetInteger(handle, MwNheight), 0, 0);
+		opaque->submenu = MwVaCreateWidget(MwSubMenuClass, "submenu", handle, 0, MwGetInteger(handle, MwNheight), 0, 0,
+						   MwNleftPadding, 16 + MwDefaultBorderWidth(handle),
+						   NULL);
+
+		MwSubMenuGetSize(opaque->submenu, opaque->menu, &rc);
+
+		fill = MwVaCreateWidget(MwFrameClass, "fill", opaque->submenu, MwDefaultBorderWidth(handle), MwDefaultBorderWidth(handle), 16, rc.height - MwDefaultBorderWidth(handle) * 2,
+					MwNbackground, opaque->stripe_color,
+					NULL);
+
+		image = MwVaCreateWidget(MwImageClass, "image", fill, 0, MwGetInteger(fill, MwNheight) - 96, 16, 96,
+					 MwNpixmap, opaque->stripe,
+					 NULL);
 
 		p.x = 0;
 		p.y = 0;
@@ -405,11 +422,32 @@ void module(MwWidget box, xl_node_t* node) {
 	opaque->menu->wsub = NULL;
 	opaque->menu->sub  = NULL;
 
+	opaque->stripe_color = NULL;
+
+	opaque->stripe = NULL;
+
 	n = node->first_child;
 
 	while(n != NULL) {
 		if(n->type == XL_NODE_NODE && strcmp(n->name, "Menu") == 0) {
 			menu_scan(opaque, n);
+		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "Stripe") == 0) {
+			xl_attribute_t* a;
+
+			if(opaque->stripe != NULL) MwLLDestroyPixmap(opaque->stripe);
+
+			opaque->stripe = MwLoadImage(box, n->text == NULL ? "" : n->text);
+
+			a = n->first_attribute;
+			while(a != NULL) {
+				if(strcmp(a->key, "Color") == 0 && a->value != NULL) {
+					if(opaque->stripe_color != NULL) free(opaque->stripe_color);
+
+					opaque->stripe_color = MwStringDuplicate(a->value);
+				}
+
+				a = a->next;
+			}
 		}
 
 		n = n->next;

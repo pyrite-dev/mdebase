@@ -28,3 +28,7 @@ install(
 	FILES ${CMAKE_CURRENT_BINARY_DIR}/mpanelrc
 	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/examples/mpanel
 )
+install(
+	FILES mde-stripe.png
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/mpanel
+)

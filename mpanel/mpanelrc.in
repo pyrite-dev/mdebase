@@ -2,9 +2,28 @@
 <Panel>
 	<Module>
 		<StartButton>
+			<Stripe Color="#000000">
+				@CMAKE_INSTALL_FULL_DATAROOTDIR@/mpanel/mde-stripe.png
+			</Stripe>
 			<Menu>
 				<Application Name="Applications" />
 				<Separator />
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
+				<Execute Name="Terminal">xterm</Execute>
 				<Execute Name="Terminal">xterm</Execute>
 			</Menu>
 		</StartButton>
