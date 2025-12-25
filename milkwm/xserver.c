@@ -320,12 +320,13 @@ static void set_name(Window wnd) {
 	unsigned long  nitem, after;
 	unsigned char* buf  = NULL;
 	Atom	       atom = XInternAtom(xdisplay, "WM_NAME", False);
+	Atom utf8 = XInternAtom(xdisplay, "UTF8_STRING", False);
 	int	       i;
 
 	for(i = 0; i < arrlen(windows); i++) {
 		if(windows[i].client == wnd) {
-			if(XGetWindowProperty(xdisplay, wnd, atom, 0, 1024, False, XA_STRING, &type, &format, &nitem, &after, &buf) == Success && buf != NULL) {
-				wm_set_name(windows[i].frame, buf);
+			if(XGetWindowProperty(xdisplay, wnd, atom, 0, 1024, False, AnyPropertyType, &type, &format, &nitem, &after, &buf) == Success && buf != NULL) {
+				if(type == XA_STRING || type == utf8) wm_set_name(windows[i].frame, buf);
 				XFree(buf);
 			}
 		}
