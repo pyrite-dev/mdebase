@@ -20,7 +20,7 @@
 #include <pthread.h>
 #include <signal.h>
 
-#define TitleBarHeight 16
+#define TitleBarHeight 18
 #define Gap 1
 
 /* xserver.c */

@@ -312,7 +312,9 @@ MwWidget wm_frame(int w, int h) {
 	MwAddUserHandler(f->titlebar, MwNmouseMoveHandler, drag, NULL);
 	MwAddUserHandler(f->titlebar, MwNmouseDownHandler, drag_down, NULL);
 
-	f->title = MwCreateWidget(MwLabelClass, "title", f->titlebar, 0, 0, 0, 0);
+	f->title = MwVaCreateWidget(MwLabelClass, "title", f->titlebar, 0, 0, 0, 0,
+		MwNleftPadding, 3,
+	NULL);
 	MwAddUserHandler(f->title, MwNmouseUpHandler, drag_up, NULL);
 	MwAddUserHandler(f->title, MwNmouseMoveHandler, drag, NULL);
 	MwAddUserHandler(f->title, MwNmouseDownHandler, drag_down, NULL);
@@ -366,15 +368,12 @@ void wm_destroy(MwWidget widget) {
 
 void wm_set_name(MwWidget widget, const char* name) {
 	wmframe_t* f = widget->opaque;
-	char*	   s = MDEStringConcatenate(" ", name);
 
 	pthread_mutex_lock(&xmutex);
 	MwVaApply(f->title,
-		  MwNtext, s,
+		  MwNtext, name,
 		  NULL);
 	pthread_mutex_unlock(&xmutex);
-
-	free(s);
 }
 
 static char tmp_bg[64];
