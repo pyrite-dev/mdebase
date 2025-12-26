@@ -313,8 +313,8 @@ MwWidget wm_frame(int w, int h) {
 	MwAddUserHandler(f->titlebar, MwNmouseDownHandler, drag_down, NULL);
 
 	f->title = MwVaCreateWidget(MwLabelClass, "title", f->titlebar, 0, 0, 0, 0,
-		MwNleftPadding, 3,
-	NULL);
+				    MwNleftPadding, 3,
+				    NULL);
 	MwAddUserHandler(f->title, MwNmouseUpHandler, drag_up, NULL);
 	MwAddUserHandler(f->title, MwNmouseMoveHandler, drag, NULL);
 	MwAddUserHandler(f->title, MwNmouseDownHandler, drag_down, NULL);

@@ -8,10 +8,19 @@
 			<Menu>
 				<Application Name="Applications" />
 				<Separator />
-				<Execute Name="Terminal">xterm</Execute>
-				<Execute Name=""></Execute>
+				<Execute Name="Terminal">uxterm</Execute>
 			</Menu>
 		</StartButton>
+	
+		<Separator />
+
+		<Launcher>
+			<Execute>uxterm</Execute>
+			<Execute>uxterm</Execute>
+			<Execute>uxterm</Execute>
+			<Execute>uxterm</Execute>
+			<Execute>uxterm</Execute>
+		</Launcher>
 	
 		<Separator />
 	

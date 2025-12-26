@@ -320,7 +320,7 @@ static void set_name(Window wnd) {
 	unsigned long  nitem, after;
 	unsigned char* buf  = NULL;
 	Atom	       atom = XInternAtom(xdisplay, "WM_NAME", False);
-	Atom utf8 = XInternAtom(xdisplay, "UTF8_STRING", False);
+	Atom	       utf8 = XInternAtom(xdisplay, "UTF8_STRING", False);
 	int	       i;
 
 	for(i = 0; i < arrlen(windows); i++) {
