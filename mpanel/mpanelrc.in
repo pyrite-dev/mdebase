@@ -10,27 +10,25 @@
 				<Application Name="Applications" />
 				<Separator />
 				<Execute Name="Terminal">uxterm</Execute>
-				<Execute Name="" />
-				<Execute Name="" />
-				<Execute Name="" />
-				<Execute Name="" />
-				<Execute Name="" />
-				<Execute Name="" />
-				<Execute Name="" />
-				<Execute Name="" />
-				<Execute Name="" />
-				<Execute Name="" />
+				<Separator />
+				<EndSession Name="End Session" />
+				<ShutDown Name="Shut Down" />
+				<Reboot Name="Reboot" />
 			</Menu>
 		</StartButton>
 	
 		<Separator />
 
 		<Launcher>
-			<Execute>uxterm</Execute>
-			<Execute>uxterm</Execute>
-			<Execute>uxterm</Execute>
-			<Execute>uxterm</Execute>
-			<Execute>uxterm</Execute>
+			<Execute Icon="terminal">uxterm</Execute>
+			<Execute Icon="terminal">uxterm</Execute>
+			<Execute Icon="terminal">uxterm</Execute>
+			<Execute Icon="terminal">uxterm</Execute>
+			<Execute Icon="terminal">uxterm</Execute>
+			<Execute Icon="terminal">uxterm</Execute>
+			<Execute Icon="terminal">uxterm</Execute>
+			<Execute Icon="terminal">uxterm</Execute>
+			<Execute Icon="terminal">uxterm</Execute>
 		</Launcher>
 	
 		<Separator />

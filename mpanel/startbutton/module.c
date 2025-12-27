@@ -339,6 +339,29 @@ static void menu_scan(opaque_t* opaque, xl_node_t* node) {
 			m->wsub	  = NULL;
 			m->sub	  = NULL;
 			m->opaque = MwStringDuplicate(n->text == NULL ? "" : n->text);
+		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "EndSession") == 0 && name != NULL) {
+			m	  = malloc(sizeof(*m));
+			m->name	  = MwStringDuplicate(name);
+			m->keep	  = 0;
+			m->wsub	  = NULL;
+			m->sub	  = NULL;
+			m->opaque = malloc(512);
+
+			sprintf(m->opaque, "kill %ld", (long)getppid());
+		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "ShutDown") == 0 && name != NULL) {
+			m	  = malloc(sizeof(*m));
+			m->name	  = MwStringDuplicate(name);
+			m->keep	  = 0;
+			m->wsub	  = NULL;
+			m->sub	  = NULL;
+			m->opaque = MwStringDuplicate(""); /* TODO */
+		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "Reboot") == 0 && name != NULL) {
+			m	  = malloc(sizeof(*m));
+			m->name	  = MwStringDuplicate(name);
+			m->keep	  = 0;
+			m->wsub	  = NULL;
+			m->sub	  = NULL;
+			m->opaque = MwStringDuplicate(""); /* TODO */
 		}
 
 		if(m != NULL) {

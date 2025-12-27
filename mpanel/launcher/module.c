@@ -1,3 +1,4 @@
+#include <MDE/Foundation.h>
 #include <Mw/Milsko.h>
 #include <xemil.h>
 
@@ -31,9 +32,33 @@ void module(MwWidget box, xl_node_t* node) {
 		int y = (gap + 18) * (c % 2);
 
 		if(n->type == XL_NODE_NODE && strcmp(n->name, "Execute") == 0 && n->text != NULL) {
-			MwWidget btn = MwVaCreateWidget(MwButtonClass, "button", f, x, y, 18, 18,
-							MwNflat, 1,
-							NULL);
+			MwLLPixmap	px = NULL;
+			MwWidget	btn;
+			const char*	icon = NULL;
+			xl_attribute_t* a    = n->first_attribute;
+
+			while(a != NULL) {
+				if(strcmp(a->key, "Icon") == 0) {
+					icon = a->value;
+				}
+				a = a->next;
+			}
+
+			if(icon != NULL && icon[0] == '/') {
+				px = MwLoadImage(box, icon);
+			} else if(icon != NULL) {
+				char* p = MDEIconLookUp("apps", icon, 16);
+
+				if(p != NULL) {
+					px = MwLoadImage(box, p);
+					free(p);
+				}
+			}
+
+			btn = MwVaCreateWidget(MwButtonClass, "button", f, x, y, 18, 18,
+					       MwNflat, 1,
+					       MwNpixmap, px,
+					       NULL);
 
 			c++;
 		}
