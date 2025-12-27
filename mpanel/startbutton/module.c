@@ -360,7 +360,7 @@ void module(MwWidget box, xl_node_t* node) {
 	int	       i;
 	xl_node_t*     n;
 
-	if((rgb = stbi_load(ICON64DIR "/logo.png", &w, &h, &ch, 4)) != NULL) {
+	if((rgb = stbi_load(ICON64DIR "/apps/mde.png", &w, &h, &ch, 4)) != NULL) {
 		int	       bw   = MwGetInteger(box, MwNheight) - MwDefaultBorderWidth(box) * 2;
 		unsigned char* data = malloc(bw * bw * 4);
 		unsigned char* save = malloc(bw * bw * 4);
