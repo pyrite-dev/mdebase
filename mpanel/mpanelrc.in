@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+<!-- This file should be copied to .config/mpanel/mpanelrc -->
 <Panel>
 	<Module>
 		<StartButton>
@@ -9,6 +10,16 @@
 				<Application Name="Applications" />
 				<Separator />
 				<Execute Name="Terminal">uxterm</Execute>
+				<Execute Name="" />
+				<Execute Name="" />
+				<Execute Name="" />
+				<Execute Name="" />
+				<Execute Name="" />
+				<Execute Name="" />
+				<Execute Name="" />
+				<Execute Name="" />
+				<Execute Name="" />
+				<Execute Name="" />
 			</Menu>
 		</StartButton>
 	

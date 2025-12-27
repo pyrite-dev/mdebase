@@ -155,7 +155,7 @@ static Pixmap render_image(Window wnd, const char* path, int tile, int fit) {
 		double sx = (double)w / xwa.width;
 		double sy = (double)h / xwa.height;
 
-		if(fit ? (sx > sy) : (sy < sx)) {
+		if(fit ? (sx > sy) : (sx < sy)) {
 			width  = w / sx;
 			height = h / sx;
 		} else {
@@ -517,7 +517,7 @@ void loop_x(void) {
 			window_t	  w;
 			int		  i;
 			int		  ret = 0;
-			XWindowAttributes xwa;
+			XWindowAttributes xwa, xwar;
 			XConfigureEvent	  ev2;
 
 			if(!XGetWindowAttributes(xdisplay, ev.xmaprequest.window, &xwa)) continue;
@@ -593,6 +593,10 @@ void loop_x(void) {
 
 				set_name(w.client);
 			}
+
+			XGetWindowAttributes(xdisplay, DefaultRootWindow(xdisplay), &xwar);
+
+			XMoveWindow(xdisplay, w.client, rand() % (xwar.width - wm_entire_width(xwa.width)), rand() % (xwar.height - wm_entire_height(xwa.height)));
 		} else if(ev.type == PropertyNotify) {
 			int i;
 			for(i = 0; i < arrlen(windows); i++) {
