@@ -298,7 +298,7 @@ static void menu_scan(opaque_t* opaque, xl_node_t* node) {
 			m->wsub	  = NULL;
 			m->sub	  = NULL;
 			m->opaque = MDEStringDuplicate(n->text == NULL ? "" : n->text);
-		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "EndSession") == 0 && name != NULL) {
+		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "LogOff") == 0 && name != NULL) {
 			m	  = malloc(sizeof(*m));
 			m->name	  = MDEStringDuplicate(name);
 			m->keep	  = 0;

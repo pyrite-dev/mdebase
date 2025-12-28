@@ -12,7 +12,7 @@
 				<Separator />
 				<Execute Name="Terminal">uxterm</Execute>
 				<Separator />
-				<EndSession Name="End Session" />
+				<LogOff Name="Log Off" />
 				<ShutDown Name="Shut Down" />
 				<Reboot Name="Reboot" />
 			</Menu>
@@ -21,14 +21,7 @@
 		<Separator ID="1" />
 
 		<Launcher ID="2">
-			<Execute Icon="terminal">uxterm</Execute>
-			<Execute Icon="terminal">uxterm</Execute>
-			<Execute Icon="terminal">uxterm</Execute>
-			<Execute Icon="terminal">uxterm</Execute>
-			<Execute Icon="terminal">uxterm</Execute>
-			<Execute Icon="terminal">uxterm</Execute>
-			<Execute Icon="terminal">uxterm</Execute>
-			<Execute Icon="terminal">uxterm</Execute>
+			<Execute Icon="firefox">firefox</Execute>
 			<Execute Icon="terminal">uxterm</Execute>
 		</Launcher>
 	
