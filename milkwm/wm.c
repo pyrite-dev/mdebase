@@ -116,10 +116,24 @@ static int alignment(const char* str) {
 }
 
 static void apply_config(MwWidget wnd) {
-	wmframe_t*  f = wnd->opaque;
-	const char* str;
+	wmframe_t*  f	= wnd->opaque;
+	const char* str = NULL;
+	xl_node_t*  n	= wm_config->root->first_child;
 
-	if(config_lookup_string(&wm_config, "Window.TitleBar.Align", &str)) {
+	while(n != NULL) {
+		if(n->type == XL_NODE_NODE && strcmp(n->name, "Window") == 0) {
+			xl_node_t* n2 = n->first_child;
+			while(n2 != NULL) {
+				if(n2->type == XL_NODE_NODE && strcmp(n2->name, "Align") == 0 && n2->text != NULL) {
+					str = n2->text;
+				}
+				n2 = n2->next;
+			}
+		}
+		n = n->next;
+	}
+
+	if(str != NULL) {
 		MwVaApply(f->title,
 			  MwNalignment, alignment(str),
 			  NULL);
@@ -249,14 +263,49 @@ static void drag(MwWidget handle, void* user, void* client) {
 	}
 }
 
+static xl_node_t* get_window(void) {
+	xl_node_t* n;
+
+	if(wm_config == NULL || wm_config->root == NULL) return NULL;
+
+	n = wm_config->root->first_child;
+	while(n != NULL) {
+		if(n->type == XL_NODE_NODE && strcmp(n->name, "Window") == 0) {
+			return n;
+		}
+
+		n = n->next;
+	}
+
+	return NULL;
+}
+
+static xl_node_t* get_titlebar(void) {
+	xl_node_t* n;
+
+	if(wm_config == NULL || wm_config->root == NULL) return NULL;
+
+	n = get_window();
+	if(n == NULL) return NULL;
+
+	n = n->first_child;
+	while(n != NULL) {
+		if(n->type == XL_NODE_NODE && strcmp(n->name, "TitleBar") == 0) {
+			return n;
+		}
+
+		n = n->next;
+	}
+
+	return NULL;
+}
+
 MwWidget wm_frame(int w, int h) {
-	MwWidget	  wnd, titlebar;
-	int		  i;
-	config_setting_t* s;
-	const char*	  str;
-	wmframe_t*	  f = malloc(sizeof(*f));
-	unsigned char*	  icon;
-	int		  y, x;
+	MwWidget       wnd, titlebar;
+	int	       i;
+	wmframe_t*     f = malloc(sizeof(*f));
+	unsigned char* icon;
+	int	       y, x;
 
 	pthread_mutex_lock(&xmutex);
 
@@ -319,26 +368,44 @@ MwWidget wm_frame(int w, int h) {
 	MwAddUserHandler(f->title, MwNmouseMoveHandler, drag, NULL);
 	MwAddUserHandler(f->title, MwNmouseDownHandler, drag_down, NULL);
 
-	s = config_lookup(&wm_config, "Window.TitleBar.Buttons.Left");
-	for(i = 0; (str = config_setting_get_string_elem(s, i)) != NULL; i++) {
-		MwWidget w = MwVaCreateWidget(MwButtonClass, "button", f->titlebar, 0, 0, TitleBarHeight, TitleBarHeight,
-					      MwNborderWidth, 1,
-					      NULL);
+	for(i = 0; i < 2; i++) {
+		xl_node_t* node = get_titlebar();
+		xl_node_t* n;
 
-		apply_button(w, str);
+		if(node == NULL) continue;
 
-		arrput(f->left, w);
-	}
+		n = node->first_child;
+		while(n != NULL) {
+			if(n->type == XL_NODE_NODE && strcmp(n->name, "Button") == 0) {
+				xl_node_t* n2 = n->first_child;
+				while(n2 != NULL) {
+					if(n2->type == XL_NODE_NODE && strcmp(n2->name, i == 0 ? "Left" : "Right") == 0) {
+						xl_node_t* n3 = n2->first_child;
+						while(n3 != NULL) {
+							if(n3->type == XL_NODE_NODE) {
+								MwWidget w = MwVaCreateWidget(MwButtonClass, "button", f->titlebar, 0, 0, TitleBarHeight, TitleBarHeight,
+											      MwNborderWidth, 1,
+											      NULL);
 
-	s = config_lookup(&wm_config, "Window.TitleBar.Buttons.Right");
-	for(i = 0; (str = config_setting_get_string_elem(s, i)) != NULL; i++) {
-		MwWidget w = MwVaCreateWidget(MwButtonClass, "button", f->titlebar, 0, 0, TitleBarHeight, TitleBarHeight,
-					      MwNborderWidth, 1,
-					      NULL);
+								apply_button(w, n3->name);
 
-		apply_button(w, str);
+								if(i == 0) {
+									arrput(f->left, w);
+								} else {
+									arrput(f->right, w);
+								}
+							}
 
-		arrput(f->right, w);
+							n3 = n3->next;
+						}
+					}
+
+					n2 = n2->next;
+				}
+			}
+
+			n = n->next;
+		}
 	}
 
 	apply_config(wnd);
@@ -377,51 +444,90 @@ void wm_set_name(MwWidget widget, const char* name) {
 }
 
 static char tmp_bg[64];
-MwLLPixmap  lookup_bg(MwWidget widget, const char* path, const char** bg) {
-	 config_setting_t* s  = config_lookup(&wm_config, path);
-	 wmframe_t*	   f  = widget->opaque;
-	 MwLLPixmap	   px = NULL;
 
-	 *bg = NULL;
-	 if(s == NULL) {
-	 } else if(config_setting_type(s) == CONFIG_TYPE_STRING) {
-		 *bg = config_setting_get_string(s);
-	 } else if(config_setting_type(s) == CONFIG_TYPE_GROUP) {
-		 const char*	from;
-		 const char*	to;
-		 int		i;
-		 unsigned char* d = malloc(1 * TitleBarHeight * 4);
-		 MwLLColor	cfrom;
-		 MwLLColor	cto;
-		 int		fr, fg, fb;
-		 int		tr, tg, tb;
+MwLLPixmap lookup_col(MwWidget widget, const char* bgfg, const char* type, const char** bg) {
+	wmframe_t* f	= widget->opaque;
+	MwLLPixmap px	= NULL;
+	xl_node_t* node = get_window();
+	xl_node_t* n;
 
-		 config_setting_lookup_string(s, "From", &from);
-		 config_setting_lookup_string(s, "To", &to);
+	*bg = NULL;
 
-		 cfrom = MwParseColor(widget, from == NULL ? MwGetText(widget, MwNbackground) : from);
-		 cto   = MwParseColor(widget, to == NULL ? MwGetText(widget, MwNbackground) : to);
-		 MwColorGet(cfrom, &fr, &fg, &fb);
-		 MwColorGet(cto, &tr, &tg, &tb);
-		 MwLLFreeColor(cfrom);
-		 MwLLFreeColor(cto);
+	if(node == NULL) return NULL;
 
-		 memset(d, 255, 1 * TitleBarHeight * 4);
+	n = node->first_child;
 
-		 for(i = 0; i < TitleBarHeight; i++) {
-			 d[i * 4 + 0] = fr + (tr - fr) * i / TitleBarHeight;
-			 d[i * 4 + 1] = fg + (tg - fg) * i / TitleBarHeight;
-			 d[i * 4 + 2] = fb + (tb - fb) * i / TitleBarHeight;
-		 }
-		 px = MwLoadRaw(widget, d, 1, TitleBarHeight);
+	while(n != NULL) {
+		if(n->type == XL_NODE_NODE && strcmp(n->name, bgfg) == 0) {
+			xl_node_t* n2 = n->first_child;
+			while(n2 != NULL) {
+				if(n2->type == XL_NODE_NODE && strcmp(n2->name, type) == 0) {
+					if(n2->text != NULL) {
+						*bg = n2->text;
+					} else {
+						const char*    from = NULL;
+						const char*    to;
+						int	       i;
+						unsigned char* d = malloc(1 * TitleBarHeight * 4);
+						MwLLColor      cfrom;
+						MwLLColor      cto;
+						int	       fr, fg, fb;
+						int	       tr, tg, tb;
+						xl_node_t*     n3 = n2->first_child;
 
-		 sprintf(tmp_bg, "#%02x%02x%02x", fr + (tr - fr) / 2, fg + (tg - fg) / 2, fb + (tb - fb) / 2);
-		 *bg = &tmp_bg[0];
+						while(n3 != NULL) {
+							if(n3->type == XL_NODE_NODE && strcmp(n3->name, "Gradient") == 0) {
+								xl_attribute_t* a = n3->first_attribute;
 
-		 free(d);
-	 }
+								while(a != NULL) {
+									if(strcmp(a->key, "From") == 0) {
+										from = a->value;
+									} else if(strcmp(a->key, "To") == 0) {
+										to = a->value;
+									}
+									a = a->next;
+								}
+							}
+							n3 = n3->next;
+						}
 
-	 return px;
+						if(from == NULL || to == NULL) {
+							free(d);
+
+							n2 = n2->next;
+							continue;
+						}
+
+						cfrom = MwParseColor(widget, from == NULL ? MwGetText(widget, MwNbackground) : from);
+						cto   = MwParseColor(widget, to == NULL ? MwGetText(widget, MwNbackground) : to);
+						MwColorGet(cfrom, &fr, &fg, &fb);
+						MwColorGet(cto, &tr, &tg, &tb);
+						MwLLFreeColor(cfrom);
+						MwLLFreeColor(cto);
+
+						memset(d, 255, 1 * TitleBarHeight * 4);
+
+						for(i = 0; i < TitleBarHeight; i++) {
+							d[i * 4 + 0] = fr + (tr - fr) * i / TitleBarHeight;
+							d[i * 4 + 1] = fg + (tg - fg) * i / TitleBarHeight;
+							d[i * 4 + 2] = fb + (tb - fb) * i / TitleBarHeight;
+						}
+						px = MwLoadRaw(widget, d, 1, TitleBarHeight);
+
+						sprintf(tmp_bg, "#%02x%02x%02x", fr + (tr - fr) / 2, fg + (tg - fg) / 2, fb + (tb - fb) / 2);
+						*bg = &tmp_bg[0];
+
+						free(d);
+					}
+				}
+				n2 = n2->next;
+			}
+		}
+
+		n = n->next;
+	}
+
+	return px;
 }
 
 void wm_focus(MwWidget widget, int focus) {
@@ -429,15 +535,18 @@ void wm_focus(MwWidget widget, int focus) {
 	const char* bg	 = NULL;
 	const char* fg	 = NULL;
 	MwLLPixmap  bgpx = NULL;
+	MwLLPixmap  fgpx = NULL;
 
 	pthread_mutex_lock(&xmutex);
 	if(focus) {
-		bgpx = lookup_bg(widget, "Window.TitleBar.Active.Background", &bg);
-		config_lookup_string(&wm_config, "Window.TitleBar.Active.Foreground", &fg);
+		bgpx = lookup_col(widget, "Background", "Active", &bg);
+		fgpx = lookup_col(widget, "Foreground", "Active", &fg);
 	} else {
-		bgpx = lookup_bg(widget, "Window.TitleBar.Inactive.Background", &bg);
-		config_lookup_string(&wm_config, "Window.TitleBar.Inactive.Foreground", &fg);
+		bgpx = lookup_col(widget, "Background", "Inactive", &bg);
+		fgpx = lookup_col(widget, "Foreground", "Inactive", &fg);
 	}
+
+	if(fgpx != NULL) MwLLDestroyPixmap(fgpx);
 
 	if(f->background != NULL) MwLLDestroyPixmap(f->background);
 	f->background = bgpx;

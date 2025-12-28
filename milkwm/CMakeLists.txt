@@ -3,14 +3,13 @@ include(MDEPkgConfig)
 mde_setup_project(milkwm ${CMAKE_INSTALL_BINDIR})
 
 mde_pkg_config_add(milkwm x11)
-mde_pkg_config_add(milkwm libconfig)
 
 mde_math_add(milkwm)
 
 target_link_libraries(
 	milkwm
 	PRIVATE
-	pthread
+	xemil pthread
 )
 
 include(GNUInstallDirs)

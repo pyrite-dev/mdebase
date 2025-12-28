@@ -201,10 +201,29 @@ static Pixmap render_image(Window wnd, const char* path, int tile, int fit) {
 
 /* this can be optimized by backends p much, so we do this in backend... */
 void set_background_x(void) {
-	const char* str;
-	const char* type;
+	const char* str	 = NULL;
+	const char* type = NULL;
+	xl_node_t*  n;
 
-	if(config_lookup_string(&wm_config, "Wallpaper.Type", &str) && strcmp(str, "Solid") == 0 && config_lookup_string(&wm_config, "Wallpaper.Color", &str)) {
+	if(wm_config == NULL || wm_config->root == NULL) {
+		n = NULL;
+	} else {
+		n = wm_config->root->first_child;
+	}
+	while(n != NULL) {
+		if(n->type == XL_NODE_NODE && strcmp(n->name, "Wallpaper") == 0) {
+			xl_attribute_t* a = n->first_attribute;
+			while(a != NULL) {
+				if(strcmp(a->key, "Type") == 0) type = a->value;
+				a = a->next;
+			}
+
+			str = n->text;
+		}
+		n = n->next;
+	}
+
+	if(type != NULL && strcmp(type, "Solid") == 0 && str != NULL) {
 		MwRGB  rgb;
 		XColor xc;
 
@@ -217,7 +236,7 @@ void set_background_x(void) {
 		XAllocColor(xdisplay, DefaultColormap(xdisplay, DefaultScreen(xdisplay)), &xc);
 
 		XSetWindowBackground(xdisplay, DefaultRootWindow(xdisplay), xc.pixel);
-	} else if(config_lookup_string(&wm_config, "Wallpaper.Type", &type) && (strcmp(type, "Tile") == 0 || strcmp(type, "Fill") == 0 || strcmp(type, "Fit") == 0) && config_lookup_string(&wm_config, "Wallpaper.Path", &str)) {
+	} else if(type != NULL && (strcmp(type, "Tile") == 0 || strcmp(type, "Fill") == 0 || strcmp(type, "Fit") == 0) && str != NULL) {
 		XWindowAttributes xwa;
 		Pixmap		  px;
 
@@ -519,6 +538,7 @@ void loop_x(void) {
 			int		  ret = 0;
 			XWindowAttributes xwa, xwar;
 			XConfigureEvent	  ev2;
+			int		  mx, my;
 
 			if(!XGetWindowAttributes(xdisplay, ev.xmaprequest.window, &xwa)) continue;
 			/* ?? ? ? ???? ?? ? ? */
@@ -530,7 +550,7 @@ void loop_x(void) {
 
 				XMapWindow(xdisplay, ev.xmaprequest.window);
 
-				if(!xwa.override_redirect) save(ev.xmaprequest.window);
+				if(xwa.override_redirect) save(ev.xmaprequest.window);
 				continue;
 			}
 
@@ -546,6 +566,12 @@ void loop_x(void) {
 			if(i != arrlen(windows)) {
 				XWindowAttributes xwa;
 				if(!XGetWindowAttributes(xdisplay, windows[i].client, &xwa)) {
+					wm_destroy(windows[i].frame);
+					arrdel(windows, i);
+					continue;
+				}
+
+				if(xwa.override_redirect) {
 					wm_destroy(windows[i].frame);
 					arrdel(windows, i);
 					continue;
@@ -596,7 +622,10 @@ void loop_x(void) {
 
 			XGetWindowAttributes(xdisplay, DefaultRootWindow(xdisplay), &xwar);
 
-			XMoveWindow(xdisplay, w.client, rand() % (xwar.width - wm_entire_width(xwa.width)), rand() % (xwar.height - wm_entire_height(xwa.height)));
+			mx = (xwar.width - wm_entire_width(xwa.width));
+			my = (xwar.height - wm_entire_height(xwa.height) - 46);
+
+			XMoveWindow(xdisplay, w.client, mx == 0 ? 0 : (rand() % mx), my == 0 ? 0 : (rand() % my));
 		} else if(ev.type == PropertyNotify) {
 			int i;
 			for(i = 0; i < arrlen(windows); i++) {
@@ -610,8 +639,10 @@ void loop_x(void) {
 				set_name(windows[i].client);
 			}
 		} else if(ev.type == MapNotify) {
-			int i;
-			if(ev.xmap.override_redirect) continue;
+			int		  i;
+			XWindowAttributes xwa;
+			if(!XGetWindowAttributes(xdisplay, ev.xmap.window, &xwa)) continue;
+			if(xwa.override_redirect) continue;
 
 			for(i = 0; i < arrlen(windows); i++) {
 				if(windows[i].client == ev.xmap.window) {

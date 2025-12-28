@@ -2,15 +2,21 @@
 
 /* we prefix them for reasons */
 
-config_t wm_config;
+xemil_t* wm_config = NULL;
 
 void wm_config_init(void) {
-	config_init(&wm_config);
 }
 
 static void read_config(const char* path) {
-	if(!config_read_file(&wm_config, path)) {
-		fprintf(stderr, "MilkWM config error: file %s at line %d: %s\n", path, config_error_line(&wm_config), config_error_text(&wm_config));
+	xemil_t* tmp;
+
+	if((tmp = xl_open_file(path)) == NULL || !xl_parse(tmp)) {
+		fprintf(stderr, "MPanel config error: file %s\n", path);
+		if(tmp != NULL) xl_close(tmp);
+	} else {
+		if(wm_config != NULL) xl_close(wm_config);
+
+		wm_config = tmp;
 	}
 }
 
@@ -22,7 +28,6 @@ void wm_config_read(void) {
 	free(dir);
 	free(conf);
 
-	config_clear(&wm_config);
 	read_config(SYSCONFDIR "/milkwm/milkwmrc");
 	read_config(path);
 

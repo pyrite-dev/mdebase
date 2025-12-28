@@ -1,41 +1,38 @@
-# This file should be copied to .config/milkwm/milkwmrc
+<?xml version="1.0"?>
+<!-- This file should be copied to .config/milkwm/milkwmrc -->
+<MilkWM>
+	<Wallpaper Type="Fill">@CMAKE_INSTALL_FULL_DATAROOTDIR@/wallpapers/mde/blue.png</Wallpaper>
+	<Window>
+		<TitleBar>
+			<Button>
+				<Left>
+					<!-- Ordered from left to right -->
+					<Close />
+				</Left>
+				<Right>
+					<!-- Ordered from right to left -->
+					<Maximize />
+					<Iconify />
+				</Right>
+			</Button>
+		</TitleBar>
+		<!-- Just don't write anything if you want default background/foreground -->
+		<Background>
+			<Active>
+				<Gradient From="#435f7e" To="#0a284b" />
+			</Active>
+			<Inactive>
+				<Gradient From="#a0a0a0" To="#cdcdcd" />
+			</Inactive>
+		</Background>
+		<Foreground>
+			<Active>white</Active>
+		</Foreground>
 
-Wallpaper: {
-	Type = "Fill";
-	Path = "@CMAKE_INSTALL_FULL_DATAROOTDIR@/wallpapers/mde/blue.png";
-};
-
-Window: {
-	TitleBar: {
-		Buttons: {
-			# Ordered from left to right
-			Left = [
-				"Close"
-			];
-
-			# Ordered from right to left
-			Right = [
-				"Maximize",
-				"Iconify"
-			];
-		};
-		Active: {
-			Background: {
-				From = "#435f7e";
-				To = "#0a284b";
-			};
-			Foreground = "white";
-		};
-		Inactive: {
-			# Just don't write anything if you want default background/foreground
- 			Background: {
-				From = "#a0a0a0";
-				To = "#cdcdcd";
-			};
-		};
-
-		# Left, Right, or Center
-		# Default is Center
-		Align = "Left";
-	};
-};
+		<!--
+			Left, Right, or Center
+			Default is Center
+		-->
+		<Align>Left</Align>
+	</Window>
+</MilkWM>

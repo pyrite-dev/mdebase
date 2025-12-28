@@ -8,7 +8,7 @@
 #include <Mw/Milsko.h>
 
 /* External */
-#include <libconfig.h>
+#include <xemil.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
@@ -51,7 +51,7 @@ int	 wm_content_x(void);
 int	 wm_content_y(void);
 
 /* config.c */
-extern config_t wm_config;
+extern xemil_t* wm_config;
 
 void wm_config_init(void);
 void wm_config_read(void);
