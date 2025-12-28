@@ -2,6 +2,12 @@
 #include <Mw/Milsko.h>
 #include <xemil.h>
 
+#include <stb_ds.h>
+
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 static int calc_gap(MwWidget box) {
 	return MwGetInteger(box, MwNheight) - 18 * 2;
 }
@@ -21,6 +27,21 @@ static int calc_size(MwWidget box, xl_node_t* node) {
 	}
 
 	return (gap + 18) * ((c + (c % 2)) / 2) - gap;
+}
+
+static void exec_button(MwWidget handle, void* user, void* client){
+	char** args = MDEStringToExec(MwGetText(handle, "Sexec"), NULL);
+	int i;
+
+	if(fork() == 0){
+		execvp(args[0], args);
+		_exit(-1);
+	}
+
+	for(i = 0; i < arrlen(args); i++) {
+		if(args[i] != NULL) free(args[i]);
+	}
+	arrfree(args);
 }
 
 void module_reload(MwWidget box, MwWidget user, xl_node_t* node) {
@@ -81,6 +102,12 @@ void module_reload(MwWidget box, MwWidget user, xl_node_t* node) {
 					       MwNflat, 1,
 					       MwNpixmap, px,
 					       NULL);
+
+			MwVaApply(btn,
+				"Sexec", n->text,
+			NULL);
+
+			MwAddUserHandler(btn, MwNactivateHandler, exec_button, NULL);
 
 			c++;
 		}

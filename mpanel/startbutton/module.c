@@ -1,13 +1,13 @@
 #include "config.h"
 
-#include <stb_image.h>
-#include <stb_ds.h>
-
 #define _MILSKO
 #include <MDE/Foundation.h>
 #include <Mw/Milsko.h>
 #include <xemil.h>
+
 #include <ini.h>
+#include <stb_image.h>
+#include <stb_ds.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -172,57 +172,13 @@ static void call(const char* name, int dir, int symlink, void* user) {
 	}
 }
 
-static char** desktop_exec(const char* exec, const char* file) {
-	char** a = NULL;
-	int    i;
-	char*  buf = malloc(1);
-
-	buf[0] = 0;
-
-	for(i = 0;; i++) {
-		if(exec[i] == ' ' || exec[i] == 0) {
-			if(strlen(buf) > 0) arrput(a, buf);
-
-			buf    = malloc(1);
-			buf[0] = 0;
-
-			if(exec[i] == 0) break;
-		} else if(exec[i] == '%') {
-			char c = exec[++i];
-
-			if(c == 'f' && file != NULL) {
-				char* old = buf;
-
-				buf = malloc(strlen(old) + strlen(file) + 1);
-				strcpy(buf, old);
-				strcpy(buf + strlen(old), file);
-
-				free(old);
-			}
-		} else {
-			char* old = buf;
-
-			buf = malloc(strlen(old) + 2);
-			strcpy(buf, old);
-			buf[strlen(old)]     = exec[i];
-			buf[strlen(old) + 1] = 0;
-
-			free(old);
-		}
-	}
-
-	arrput(a, NULL);
-
-	return a;
-}
-
 static void menu(MwWidget handle, void* user, void* client) {
 	opaque_t* opaque = handle->opaque;
 	char*	  s	 = NULL;
 	MwMenu	  m	 = client;
 
 	if(m->opaque != NULL) {
-		char** args = desktop_exec(m->opaque, NULL);
+		char** args = MDEStringToExec(m->opaque, NULL);
 		int    i;
 
 		if(fork() == 0) {
