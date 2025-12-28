@@ -13,6 +13,12 @@ reload_all () {
 	kill_all -HUP
 }
 
+restart_all () {
+	kill_all
+	sleep 0.5
+	start_all
+}
+
 start_all () {
 	"@CMAKE_INSTALL_FULL_BINDIR@/mpanel" &
 	PANEL="$!"
@@ -24,6 +30,7 @@ start_all () {
 trap "stop_all" INT
 trap "stop_all" TERM
 trap "reload_all" HUP
+trap "restart_all" USR1
 
 start_all
 

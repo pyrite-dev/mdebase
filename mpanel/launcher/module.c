@@ -101,6 +101,7 @@ void module_reload(MwWidget box, MwWidget user, xl_node_t* node) {
 			btn = MwVaCreateWidget(MwButtonClass, "button", user, x, y, 18, 18,
 					       MwNflat, 1,
 					       MwNpixmap, px,
+					       MwNborderWidth, 1,
 					       NULL);
 
 			MwVaApply(btn,
