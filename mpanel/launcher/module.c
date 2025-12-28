@@ -33,7 +33,13 @@ void module_reload(MwWidget box, MwWidget user, xl_node_t* node) {
 	children = MwGetChildren(user);
 	if(children != NULL) {
 		int i;
-		for(i = 0; children[i] != NULL; i++) MwDestroyWidget(children[i]);
+		for(i = 0; children[i] != NULL; i++) {
+			MwLLPixmap px = MwGetVoid(children[i], MwNpixmap);
+
+			if(px != NULL) MwLLDestroyPixmap(px);
+
+			MwDestroyWidget(children[i]);
+		}
 		free(children);
 	}
 
@@ -94,4 +100,23 @@ MwWidget module(MwWidget box, xl_node_t* node) {
 	module_reload(box, f, node);
 
 	return f;
+}
+
+void module_destroy(MwWidget box, MwWidget user) {
+	MwWidget* children;
+
+	children = MwGetChildren(user);
+	if(children != NULL) {
+		int i;
+		for(i = 0; children[i] != NULL; i++) {
+			MwLLPixmap px = MwGetVoid(children[i], MwNpixmap);
+
+			if(px != NULL) MwLLDestroyPixmap(px);
+
+			MwDestroyWidget(children[i]);
+		}
+		free(children);
+	}
+
+	MwDestroyWidget(user);
 }

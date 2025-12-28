@@ -83,3 +83,7 @@ MwWidget module(MwWidget box, xl_node_t* node) {
 
 	return b;
 }
+
+void module_destroy(MwWidget box, MwWidget user) {
+	MwDestroyWidget(user);
+}

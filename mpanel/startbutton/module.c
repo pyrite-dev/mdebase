@@ -513,3 +513,19 @@ MwWidget module(MwWidget box, xl_node_t* node) {
 
 	return btn;
 }
+
+void module_destroy(MwWidget box, MwWidget user) {
+	opaque_t* opaque = user->opaque;
+
+	MwLLDestroyPixmap(opaque->closed);
+	MwLLDestroyPixmap(opaque->opened);
+
+	if(opaque->stripe != NULL) MwLLDestroyPixmap(opaque->stripe);
+	if(opaque->stripe_color != NULL) free(opaque->stripe_color);
+
+	recursive_free(opaque->menu);
+
+	free(opaque);
+
+	MwDestroyWidget(user);
+}

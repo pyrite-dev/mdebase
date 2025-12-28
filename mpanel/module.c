@@ -6,6 +6,8 @@ typedef struct module {
 	char*	 key;
 	void*	 value;
 	MwWidget user;
+	int	 is_there;
+	int	 count;
 } module_t;
 module_t* modules = NULL;
 
@@ -22,7 +24,7 @@ static void read_config(xemil_t** cfg, const char* path) {
 	}
 }
 
-static void init_module(xl_node_t* node) {
+static void init_module(xl_node_t* node, int count) {
 	char*		p  = MDEStringConcatenate("lib", node->name);
 	char*		p2 = MDEStringConcatenate(p, "Module.so");
 	char*		s  = MwDirectoryJoin(LIBDIR "/mpanel", p2);
@@ -52,8 +54,10 @@ static void init_module(xl_node_t* node) {
 
 				shput(modules, id, lib);
 
-				ind		  = shgeti(modules, id);
-				modules[ind].user = ret;
+				ind		      = shgeti(modules, id);
+				modules[ind].user     = ret;
+				modules[ind].is_there = 1;
+				modules[ind].count    = count;
 			}
 		} else {
 			void (*module)(MwWidget box, MwWidget user, xl_node_t* node);
@@ -67,6 +71,9 @@ static void init_module(xl_node_t* node) {
 			if(module != NULL) {
 				module(box, modules[ind].user, node);
 			}
+
+			modules[ind].is_there = 1;
+			modules[ind].count    = count;
 		}
 	}
 
@@ -76,11 +83,12 @@ static void init_module(xl_node_t* node) {
 }
 
 static void module_scan(xl_node_t* node) {
-	xl_node_t* n = node->first_child;
+	xl_node_t* n	 = node->first_child;
+	int	   count = 0;
 
 	while(n != NULL) {
 		if(n->type == XL_NODE_NODE) {
-			init_module(n);
+			init_module(n, count++);
 		}
 
 		n = n->next;
@@ -127,10 +135,22 @@ void load_modules(void) {
 	}
 }
 
+int sort_num(const void* a, const void* b) {
+	return ((module_t*)a)->count - ((module_t*)b)->count;
+}
+
 void reload_modules(void) {
 	xemil_t* cfg = NULL;
+	int	 i;
+	int	 old;
 
 	prepare_config(&cfg);
+
+	for(i = 0; i < shlen(modules); i++) {
+		modules[i].is_there = 0;
+	}
+
+	old = shlen(modules);
 
 	if(cfg != NULL && cfg->root != NULL) {
 		xl_node_t* n = cfg->root->first_child;
@@ -148,5 +168,35 @@ void reload_modules(void) {
 		}
 
 		xl_close(cfg);
+	}
+
+	for(i = 0; i < shlen(modules); i++) {
+		if(!modules[i].is_there) {
+			void (*module)(MwWidget box, MwWidget user) = dlsym(modules[i].value, "module_destroy");
+
+			if(module != NULL) {
+				module(box, modules[i].user);
+			}
+
+			dlclose(modules[i].value);
+
+			shdel(modules, modules[i].key);
+
+			i = -1;
+		}
+	}
+
+	if(old != shlen(modules)) {
+		module_t* mods = NULL;
+
+		for(i = 0; i < shlen(modules); i++) arrput(mods, modules[i]);
+
+		qsort(mods, arrlen(mods), sizeof(*mods), sort_num);
+
+		for(i = 0; i < arrlen(mods); i++) {
+			MwReparent(mods[i].user, box);
+		}
+
+		arrfree(mods);
 	}
 }

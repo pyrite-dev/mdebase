@@ -2,6 +2,7 @@
 <!-- This file should be copied to .config/mpanel/mpanelrc -->
 <Panel>
 	<Module>
+		<!-- !!! We keep track of modules using ID - so do not remove ID !!! -->
 		<StartButton ID="0">
 			<Stripe Color="#000000">
 				@CMAKE_INSTALL_FULL_DATAROOTDIR@/mpanel/mde-stripe.png

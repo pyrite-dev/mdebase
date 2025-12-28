@@ -7,3 +7,7 @@ MwWidget module(MwWidget box, xl_node_t* node) {
 				MwNorientation, MwVERTICAL,
 				NULL);
 }
+
+void module_destroy(MwWidget box, MwWidget user) {
+	MwDestroyWidget(user);
+}
