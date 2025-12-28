@@ -5,6 +5,10 @@ MwWidget window, box;
 
 static int first = 1;
 
+static void sig_hup(int sig) {
+	reload_modules();
+}
+
 static void resize(MwWidget handle, void* user, void* client) {
 	int bw = MwDefaultBorderWidth(window) + 2;
 
@@ -19,6 +23,8 @@ static void resize(MwWidget handle, void* user, void* client) {
 		first = 0;
 
 		load_modules();
+
+		signal(SIGHUP, sig_hup);
 	}
 }
 
@@ -26,6 +32,7 @@ int main() {
 	MwRect rc;
 
 	signal(SIGCHLD, SIG_IGN);
+	signal(SIGHUP, SIG_IGN);
 
 	MwLibraryInit();
 

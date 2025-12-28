@@ -1,18 +1,31 @@
 #!/bin/sh
 
+kill_all () {
+	kill $1 $PANEL $WM
+}
+
 stop_all () {
-	kill $PANEL $WM
+	kill_all
 	exit
+}
+
+reload_all () {
+	kill_all -HUP
+}
+
+start_all () {
+	"@CMAKE_INSTALL_FULL_BINDIR@/mpanel" &
+	PANEL="$!"
+
+	"@CMAKE_INSTALL_FULL_BINDIR@/milkwm" &
+	WM="$!"
 }
 
 trap "stop_all" INT
 trap "stop_all" TERM
+trap "reload_all" HUP
 
-"@CMAKE_INSTALL_FULL_BINDIR@/mpanel" &
-PANEL="$!"
-
-"@CMAKE_INSTALL_FULL_BINDIR@/milkwm" &
-WM="$!"
+start_all
 
 while true; do
 	wait

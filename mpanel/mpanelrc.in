@@ -2,7 +2,7 @@
 <!-- This file should be copied to .config/mpanel/mpanelrc -->
 <Panel>
 	<Module>
-		<StartButton>
+		<StartButton ID="0">
 			<Stripe Color="#000000">
 				@CMAKE_INSTALL_FULL_DATAROOTDIR@/mpanel/mde-stripe.png
 			</Stripe>
@@ -17,9 +17,9 @@
 			</Menu>
 		</StartButton>
 	
-		<Separator />
+		<Separator ID="1" />
 
-		<Launcher>
+		<Launcher ID="2">
 			<Execute Icon="terminal">uxterm</Execute>
 			<Execute Icon="terminal">uxterm</Execute>
 			<Execute Icon="terminal">uxterm</Execute>
@@ -31,13 +31,13 @@
 			<Execute Icon="terminal">uxterm</Execute>
 		</Launcher>
 	
-		<Separator />
+		<Separator ID="3" />
 	
-		<TaskBar>
+		<TaskBar ID="4">
 		</TaskBar>
 	
-		<Separator />
+		<Separator ID="5" />
 	
-		<Time />
+		<Time ID="6" />
 	</Module>
 </Panel>

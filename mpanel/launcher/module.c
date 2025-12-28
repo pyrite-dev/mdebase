@@ -2,14 +2,15 @@
 #include <Mw/Milsko.h>
 #include <xemil.h>
 
-void module(MwWidget box, xl_node_t* node) {
-	MwWidget   f;
-	xl_node_t* n;
-	int	   c;
-	int	   w;
-	int	   gap = (MwGetInteger(box, MwNheight) - 18 * 2);
+static int calc_gap(MwWidget box) {
+	return MwGetInteger(box, MwNheight) - 18 * 2;
+}
 
-	c = 0;
+static int calc_size(MwWidget box, xl_node_t* node) {
+	xl_node_t* n;
+	int	   gap = calc_gap(box);
+	int	   c   = 0;
+
 	n = node->first_child;
 	while(n != NULL) {
 		if(n->type == XL_NODE_NODE && strcmp(n->name, "Execute") == 0 && n->text != NULL) {
@@ -19,11 +20,26 @@ void module(MwWidget box, xl_node_t* node) {
 		n = n->next;
 	}
 
-	w = (c + (c % 2)) / 2;
+	return (gap + 18) * ((c + (c % 2)) / 2) - gap;
+}
 
-	f = MwVaCreateWidget(MwFrameClass, "launcher", box, 0, 0, 0, 0,
-			     MwNfixedSize, (gap + 18) * w - gap,
-			     NULL);
+void module_reload(MwWidget box, MwWidget user, xl_node_t* node) {
+	int	   w   = calc_size(box, node);
+	int	   gap = calc_gap(box);
+	xl_node_t* n;
+	int	   c;
+	MwWidget*  children;
+
+	children = MwGetChildren(user);
+	if(children != NULL) {
+		int i;
+		for(i = 0; children[i] != NULL; i++) MwDestroyWidget(children[i]);
+		free(children);
+	}
+
+	MwVaApply(user,
+		  MwNfixedSize, w,
+		  NULL);
 
 	c = 0;
 	n = node->first_child;
@@ -55,7 +71,7 @@ void module(MwWidget box, xl_node_t* node) {
 				}
 			}
 
-			btn = MwVaCreateWidget(MwButtonClass, "button", f, x, y, 18, 18,
+			btn = MwVaCreateWidget(MwButtonClass, "button", user, x, y, 18, 18,
 					       MwNflat, 1,
 					       MwNpixmap, px,
 					       NULL);
@@ -65,4 +81,17 @@ void module(MwWidget box, xl_node_t* node) {
 
 		n = n->next;
 	}
+}
+
+MwWidget module(MwWidget box, xl_node_t* node) {
+	MwWidget f;
+	int	 w = calc_size(box, node);
+
+	f = MwVaCreateWidget(MwFrameClass, "launcher", box, 0, 0, 0, 0,
+			     MwNfixedSize, w,
+			     NULL);
+
+	module_reload(box, f, node);
+
+	return f;
 }

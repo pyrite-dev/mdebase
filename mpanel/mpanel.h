@@ -13,11 +13,13 @@
 /* Standard */
 #include <dlfcn.h>
 #include <unistd.h>
+#include <signal.h>
 
 /* main.c */
 extern MwWidget window, box;
 
 /* module.c */
 void load_modules(void);
+void reload_modules(void);
 
 #endif

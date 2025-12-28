@@ -36,11 +36,11 @@ static int dumper(void* user, const char* section, const char* name, const char*
 	if(strcmp(section, "Desktop Entry") != 0) return 1;
 
 	if(strcmp(name, "Name") == 0) {
-		opaque->name = MwStringDuplicate(value);
+		opaque->name = MDEStringDuplicate(value);
 	} else if(strcmp(name, "Categories") == 0) {
-		opaque->category = MwStringDuplicate(value);
+		opaque->category = MDEStringDuplicate(value);
 	} else if(strcmp(name, "Exec") == 0) {
-		opaque->exec = MwStringDuplicate(value);
+		opaque->exec = MDEStringDuplicate(value);
 	}
 
 	return 1;
@@ -143,11 +143,12 @@ static void call(const char* name, int dir, int symlink, void* user) {
 			}
 		}
 		if(mc == NULL) {
-			mc	 = malloc(sizeof(*mc));
-			mc->name = (char*)category_mapping[c];
-			mc->keep = 0;
-			mc->sub	 = NULL;
-			mc->wsub = NULL;
+			mc	   = malloc(sizeof(*mc));
+			mc->name   = MDEStringDuplicate(category_mapping[c]);
+			mc->keep   = 0;
+			mc->sub	   = NULL;
+			mc->wsub   = NULL;
+			mc->opaque = NULL;
 
 			arrput(opaque->current->sub, mc);
 		}
@@ -313,35 +314,37 @@ static void menu_scan(opaque_t* opaque, xl_node_t* node) {
 		MwMenu m    = NULL;
 
 		if(n->type == XL_NODE_NODE && strcmp(n->name, "Application") == 0 && name != NULL) {
-			m	= malloc(sizeof(*m));
-			m->name = MwStringDuplicate(name);
-			m->keep = 0;
-			m->wsub = NULL;
-			m->sub	= NULL;
+			m	  = malloc(sizeof(*m));
+			m->name	  = MDEStringDuplicate(name);
+			m->keep	  = 0;
+			m->wsub	  = NULL;
+			m->sub	  = NULL;
+			m->opaque = NULL;
 
 			opaque->current = m;
 
 			MDEDirectoryScan(DATAROOTDIR "/applications", call, opaque);
-			MDEDirectoryScan("/usr/share/applications", call, opaque);
 #if defined(__NetBSD__)
 			MDEDirectoryScan("/usr/pkg/share/applications", call, opaque);
 #endif
+			MDEDirectoryScan("/usr/share/applications", call, opaque);
 		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "Separator") == 0) {
-			m	= malloc(sizeof(*m));
-			m->name = MwStringDuplicate("----");
-			m->keep = 0;
-			m->wsub = NULL;
-			m->sub	= NULL;
-		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "Execute") == 0 && name != NULL) {
 			m	  = malloc(sizeof(*m));
-			m->name	  = MwStringDuplicate(name);
+			m->name	  = MDEStringDuplicate("----");
 			m->keep	  = 0;
 			m->wsub	  = NULL;
 			m->sub	  = NULL;
-			m->opaque = MwStringDuplicate(n->text == NULL ? "" : n->text);
+			m->opaque = NULL;
+		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "Execute") == 0 && name != NULL) {
+			m	  = malloc(sizeof(*m));
+			m->name	  = MDEStringDuplicate(name);
+			m->keep	  = 0;
+			m->wsub	  = NULL;
+			m->sub	  = NULL;
+			m->opaque = MDEStringDuplicate(n->text == NULL ? "" : n->text);
 		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "EndSession") == 0 && name != NULL) {
 			m	  = malloc(sizeof(*m));
-			m->name	  = MwStringDuplicate(name);
+			m->name	  = MDEStringDuplicate(name);
 			m->keep	  = 0;
 			m->wsub	  = NULL;
 			m->sub	  = NULL;
@@ -350,18 +353,18 @@ static void menu_scan(opaque_t* opaque, xl_node_t* node) {
 			sprintf(m->opaque, "kill %ld", (long)getppid());
 		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "ShutDown") == 0 && name != NULL) {
 			m	  = malloc(sizeof(*m));
-			m->name	  = MwStringDuplicate(name);
+			m->name	  = MDEStringDuplicate(name);
 			m->keep	  = 0;
 			m->wsub	  = NULL;
 			m->sub	  = NULL;
-			m->opaque = MwStringDuplicate(""); /* TODO */
+			m->opaque = MDEStringDuplicate(""); /* TODO */
 		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "Reboot") == 0 && name != NULL) {
 			m	  = malloc(sizeof(*m));
-			m->name	  = MwStringDuplicate(name);
+			m->name	  = MDEStringDuplicate(name);
 			m->keep	  = 0;
 			m->wsub	  = NULL;
 			m->sub	  = NULL;
-			m->opaque = MwStringDuplicate(""); /* TODO */
+			m->opaque = MDEStringDuplicate(""); /* TODO */
 		}
 
 		if(m != NULL) {
@@ -372,7 +375,65 @@ static void menu_scan(opaque_t* opaque, xl_node_t* node) {
 	}
 }
 
-void module(MwWidget box, xl_node_t* node) {
+static void recursive_free(MwMenu menu) {
+	int i;
+
+	for(i = 0; i < arrlen(menu->sub); i++) recursive_free(menu->sub[i]);
+	if(menu->opaque != NULL) free(menu->opaque);
+	if(menu->name != NULL) free(menu->name);
+	if(menu->wsub != NULL) MwDestroyWidget(menu->wsub);
+	free(menu);
+}
+
+void module_reload(MwWidget box, MwWidget user, xl_node_t* node) {
+	xl_node_t* n;
+	opaque_t*  opaque = user->opaque;
+	int	   i;
+
+	if(opaque->menu != NULL) recursive_free(opaque->menu);
+
+	opaque->menu	     = malloc(sizeof(*opaque->menu));
+	opaque->menu->name   = NULL;
+	opaque->menu->keep   = 0;
+	opaque->menu->wsub   = NULL;
+	opaque->menu->sub    = NULL;
+	opaque->menu->opaque = NULL;
+
+	n = node->first_child;
+
+	while(n != NULL) {
+		if(n->type == XL_NODE_NODE && strcmp(n->name, "Menu") == 0) {
+			menu_scan(opaque, n);
+		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "Stripe") == 0) {
+			xl_attribute_t* a;
+
+			if(opaque->stripe != NULL) MwLLDestroyPixmap(opaque->stripe);
+			opaque->stripe = MwLoadImage(box, n->text == NULL ? "" : n->text);
+
+			a = n->first_attribute;
+			while(a != NULL) {
+				if(strcmp(a->key, "Color") == 0 && a->value != NULL) {
+					if(opaque->stripe_color != NULL) free(opaque->stripe_color);
+
+					opaque->stripe_color = MDEStringDuplicate(a->value);
+				}
+
+				a = a->next;
+			}
+		}
+
+		n = n->next;
+	}
+
+	if(arrlen(opaque->menu->sub[0]->sub) > 0) {
+		qsort(opaque->menu->sub[0]->sub, arrlen(opaque->menu->sub[0]->sub), sizeof(MwMenu), sort_alphabet);
+		for(i = 0; i < arrlen(opaque->menu->sub[0]->sub); i++) {
+			qsort(opaque->menu->sub[0]->sub[i]->sub, arrlen(opaque->menu->sub[0]->sub[i]->sub), sizeof(MwMenu), sort_alphabet);
+		}
+	}
+}
+
+MwWidget module(MwWidget box, xl_node_t* node) {
 	MwLLPixmap     closed = NULL;
 	MwLLPixmap     opened = NULL;
 	MwWidget       btn;
@@ -380,8 +441,6 @@ void module(MwWidget box, xl_node_t* node) {
 	unsigned int   ch;
 	unsigned char* rgb;
 	opaque_t*      opaque = malloc(sizeof(*opaque));
-	int	       i;
-	xl_node_t*     n;
 
 	if((rgb = stbi_load(ICON64DIR "/apps/mde.png", &w, &h, &ch, 4)) != NULL) {
 		int	       bw   = MwGetInteger(box, MwNheight) - MwDefaultBorderWidth(box) * 2;
@@ -434,57 +493,23 @@ void module(MwWidget box, xl_node_t* node) {
 			       MwNpixmap, closed,
 			       NULL);
 
+	btn->opaque = opaque;
+
 	opaque->closed	  = closed;
 	opaque->opened	  = opened;
 	opaque->submenu	  = NULL;
 	opaque->is_opened = 0;
 
-	opaque->menu	   = malloc(sizeof(*opaque->menu));
-	opaque->menu->name = NULL;
-	opaque->menu->keep = 0;
-	opaque->menu->wsub = NULL;
-	opaque->menu->sub  = NULL;
-
 	opaque->stripe_color = NULL;
 
 	opaque->stripe = NULL;
 
-	n = node->first_child;
+	opaque->menu = NULL;
 
-	while(n != NULL) {
-		if(n->type == XL_NODE_NODE && strcmp(n->name, "Menu") == 0) {
-			menu_scan(opaque, n);
-		} else if(n->type == XL_NODE_NODE && strcmp(n->name, "Stripe") == 0) {
-			xl_attribute_t* a;
-
-			if(opaque->stripe != NULL) MwLLDestroyPixmap(opaque->stripe);
-
-			opaque->stripe = MwLoadImage(box, n->text == NULL ? "" : n->text);
-
-			a = n->first_attribute;
-			while(a != NULL) {
-				if(strcmp(a->key, "Color") == 0 && a->value != NULL) {
-					if(opaque->stripe_color != NULL) free(opaque->stripe_color);
-
-					opaque->stripe_color = MwStringDuplicate(a->value);
-				}
-
-				a = a->next;
-			}
-		}
-
-		n = n->next;
-	}
-
-	if(arrlen(opaque->menu->sub[0]->sub) > 0) {
-		qsort(opaque->menu->sub[0]->sub, arrlen(opaque->menu->sub[0]->sub), sizeof(MwMenu), sort_alphabet);
-		for(i = 0; i < arrlen(opaque->menu->sub[0]->sub); i++) {
-			qsort(opaque->menu->sub[0]->sub[i]->sub, arrlen(opaque->menu->sub[0]->sub[i]->sub), sizeof(MwMenu), sort_alphabet);
-		}
-	}
-
-	btn->opaque = opaque;
+	module_reload(box, btn, node);
 
 	MwAddUserHandler(btn, MwNactivateHandler, activate, NULL);
 	MwAddUserHandler(btn, MwNmenuHandler, menu, NULL);
+
+	return btn;
 }

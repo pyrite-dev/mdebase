@@ -54,7 +54,7 @@ static void tick(MwWidget handle, void* user, void* client) {
 	free(children);
 }
 
-void module(MwWidget box, xl_node_t* node) {
+MwWidget module(MwWidget box, xl_node_t* node) {
 	MwWidget b    = MwVaCreateWidget(MwBoxClass, "time", box, 0, 0, 0, 0,
 					 MwNfixedSize, 64,
 					 MwNbackground, "#bebdb2",
@@ -80,4 +80,6 @@ void module(MwWidget box, xl_node_t* node) {
 	MwAddUserHandler(b, MwNtickHandler, tick, NULL);
 
 	MwAddTickList(b);
+
+	return b;
 }
