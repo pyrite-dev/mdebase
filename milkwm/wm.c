@@ -167,7 +167,7 @@ static void maximize(MwWidget handle, void* user, void* client) {
 			  MwNx, 0,
 			  MwNy, 0,
 			  MwNwidth, rc.width,
-			  MwNheight, rc.height,
+			  MwNheight, rc.height - 46,
 			  NULL);
 	}
 }
