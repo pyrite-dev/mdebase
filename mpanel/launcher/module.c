@@ -47,7 +47,7 @@ void module(MwWidget box, xl_node_t* node) {
 			if(icon != NULL && icon[0] == '/') {
 				px = MwLoadImage(box, icon);
 			} else if(icon != NULL) {
-				char* p = MDEIconLookUp("apps", icon, 16);
+				char* p = MDEIconLookUp("Applications", icon, 16);
 
 				if(p != NULL) {
 					px = MwLoadImage(box, p);
