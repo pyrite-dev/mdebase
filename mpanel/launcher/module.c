@@ -29,11 +29,11 @@ static int calc_size(MwWidget box, xl_node_t* node) {
 	return (gap + 18) * ((c + (c % 2)) / 2) - gap;
 }
 
-static void exec_button(MwWidget handle, void* user, void* client){
+static void exec_button(MwWidget handle, void* user, void* client) {
 	char** args = MDEStringToExec(MwGetText(handle, "Sexec"), NULL);
-	int i;
+	int    i;
 
-	if(fork() == 0){
+	if(fork() == 0) {
 		execvp(args[0], args);
 		_exit(-1);
 	}
@@ -104,8 +104,8 @@ void module_reload(MwWidget box, MwWidget user, xl_node_t* node) {
 					       NULL);
 
 			MwVaApply(btn,
-				"Sexec", n->text,
-			NULL);
+				  "Sexec", n->text,
+				  NULL);
 
 			MwAddUserHandler(btn, MwNactivateHandler, exec_button, NULL);
 
