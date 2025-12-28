@@ -346,6 +346,10 @@ void module_reload(MwWidget box, MwWidget user, xl_node_t* node) {
 	opaque_t*  opaque = user->opaque;
 	int	   i;
 
+	if(opaque->submenu != NULL) {
+		activate(user, NULL, NULL);
+	}
+
 	if(opaque->menu != NULL) recursive_free(opaque->menu);
 
 	opaque->menu	     = malloc(sizeof(*opaque->menu));
