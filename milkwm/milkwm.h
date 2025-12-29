@@ -49,6 +49,8 @@ int	 wm_content_width(int entire);
 int	 wm_content_height(int entire);
 int	 wm_content_x(void);
 int	 wm_content_y(void);
+int	 wm_set_icon_by_name(MwWidget widget, const char* cat, const char* name);
+void	 wm_set_icon(MwWidget widget, unsigned char* data, int width, int height);
 
 /* config.c */
 extern xemil_t* wm_config;

@@ -7,7 +7,7 @@
 			<Button>
 				<Left>
 					<!-- Ordered from left to right -->
-					<Close />
+					<Menu />
 				</Left>
 				<Right>
 					<!-- Ordered from right to left -->

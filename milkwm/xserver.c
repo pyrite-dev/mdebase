@@ -333,18 +333,88 @@ static int parent_eq(Window wnd, Window might_be_parent) {
 	return 0;
 }
 
-static void set_name(Window wnd) {
+static void set_stuff(Window wnd) {
 	Atom	       type;
 	int	       format;
 	unsigned long  nitem, after;
-	unsigned char* buf  = NULL;
-	Atom	       atom = XInternAtom(xdisplay, "WM_NAME", False);
-	Atom	       utf8 = XInternAtom(xdisplay, "UTF8_STRING", False);
+	unsigned char* buf	 = NULL;
+	Atom	       atom_name = XInternAtom(xdisplay, "WM_NAME", False);
+	Atom	       atom_icon = XInternAtom(xdisplay, "_NET_WM_ICON", False);
+	Atom	       utf8	 = XInternAtom(xdisplay, "UTF8_STRING", False);
 	int	       i;
 
 	for(i = 0; i < arrlen(windows); i++) {
 		if(windows[i].client == wnd) {
-			if(XGetWindowProperty(xdisplay, wnd, atom, 0, 1024, False, AnyPropertyType, &type, &format, &nitem, &after, &buf) == Success && buf != NULL) {
+			XClassHint*    ch  = XAllocClassHint();
+			int	       def = 1;
+			int	       l   = 0;
+			int	       wid = 2048, hei = 2048;
+			unsigned char* data = NULL;
+
+			while(1) {
+				l += 2;
+				if(def && XGetWindowProperty(xdisplay, wnd, atom_icon, l - 2, 2, False, XA_CARDINAL, &type, &format, &nitem, &after, &buf) == Success && buf != NULL) {
+					if(nitem == 2) {
+						long* b = (long*)buf;
+						int   w = b[0], h = b[1];
+
+						l += w * h;
+
+						XFree(buf);
+
+						if(w <= 1024 && h <= 1024) {
+							if(w == 16 || h == 16 || w < wid || h < hei) {
+								if(data != NULL) free(data);
+								data = malloc(4 * w * h);
+
+								if(XGetWindowProperty(xdisplay, wnd, atom_icon, l - w * h, w * h, False, XA_CARDINAL, &type, &format, &nitem, &after, &buf) == Success && buf != NULL) {
+									if(nitem == w * h) {
+										int i;
+										b = (long*)buf;
+										for(i = 0; i < w * h; i++) {
+											data[4 * i + 0] = (b[i] >> 16) & 0xff;
+											data[4 * i + 1] = (b[i] >> 8) & 0xff;
+											data[4 * i + 2] = (b[i] >> 0) & 0xff;
+											data[4 * i + 3] = (b[i] >> 24) & 0xff;
+										}
+									}
+
+									XFree(buf);
+								}
+
+								wid = w;
+								hei = h;
+							}
+						}
+					} else {
+						XFree(buf);
+
+						break;
+					}
+				} else {
+					break;
+				}
+			}
+
+			if(def && data != NULL) {
+				wm_set_icon(windows[i].frame, data, wid, hei);
+
+				free(data);
+
+				def = 0;
+			}
+
+			if(def && XGetClassHint(xdisplay, wnd, ch)) {
+				if(wm_set_icon_by_name(windows[i].frame, NULL, ch->res_name)) def = 0;
+			}
+
+			XFree(ch);
+
+			if(def) {
+				wm_set_icon_by_name(windows[i].frame, NULL, "unknown");
+			}
+
+			if(XGetWindowProperty(xdisplay, wnd, atom_name, 0, 1024, False, AnyPropertyType, &type, &format, &nitem, &after, &buf) == Success && buf != NULL) {
 				if(type == XA_STRING || type == utf8) wm_set_name(windows[i].frame, buf);
 				XFree(buf);
 			}
@@ -409,7 +479,7 @@ void loop_x(void) {
 
 				arrput(windows, w);
 
-				set_name(w.client);
+				set_stuff(w.client);
 			}
 		}
 		XFree(children);
@@ -617,7 +687,7 @@ void loop_x(void) {
 			} else {
 				arrput(windows, w);
 
-				set_name(w.client);
+				set_stuff(w.client);
 			}
 
 			XGetWindowAttributes(xdisplay, DefaultRootWindow(xdisplay), &xwar);
@@ -635,8 +705,8 @@ void loop_x(void) {
 			}
 			if(arrlen(windows) == i) continue;
 
-			if(ev.xproperty.atom == XInternAtom(xdisplay, "WM_NAME", False)) {
-				set_name(windows[i].client);
+			if(ev.xproperty.atom == XInternAtom(xdisplay, "WM_NAME", False) || ev.xproperty.atom == XInternAtom(xdisplay, "WM_CLASS", False) || ev.xproperty.atom == XInternAtom(xdisplay, "_NET_WM_ICON", False)) {
+				set_stuff(windows[i].client);
 			}
 		} else if(ev.type == MapNotify) {
 			int		  i;

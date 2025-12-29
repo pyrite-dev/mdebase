@@ -14,6 +14,8 @@ typedef struct wmframe {
 	MwWidget* left;
 	MwWidget* right;
 
+	MwWidget menu_button;
+
 	MwLLPixmap maximize;
 	MwLLPixmap restore;
 	MwLLPixmap iconify;
@@ -200,6 +202,8 @@ static void apply_button(MwWidget widget, const char* str) {
 		MwAddUserHandler(widget, MwNactivateHandler, maximize, w);
 	} else if(strcmp(str, "Iconify") == 0) {
 		px = f->iconify;
+	} else if(strcmp(str, "Menu") == 0) {
+		f->menu_button = widget;
 	}
 
 	if(px != NULL) {
@@ -321,6 +325,8 @@ MwWidget wm_frame(int w, int h) {
 	f->maximized  = 0;
 	f->dragging   = 0;
 
+	f->menu_button = NULL;
+
 	icon = malloc(10 * 6 * 4);
 
 	memset(icon, 0, 10 * 6 * 4);
@@ -414,6 +420,8 @@ MwWidget wm_frame(int w, int h) {
 
 	pthread_mutex_unlock(&xmutex);
 
+	wm_set_icon_by_name(wnd, NULL, "unknown");
+
 	return wnd;
 }
 
@@ -440,6 +448,54 @@ void wm_set_name(MwWidget widget, const char* name) {
 	MwVaApply(f->title,
 		  MwNtext, name,
 		  NULL);
+	pthread_mutex_unlock(&xmutex);
+}
+
+int wm_set_icon_by_name(MwWidget widget, const char* cat, const char* name) {
+	wmframe_t* f  = widget->opaque;
+	MwLLPixmap px = NULL;
+	int	   st = 0;
+
+	pthread_mutex_lock(&xmutex);
+	if(f->menu_button != NULL) {
+		char* p;
+
+		if((px = MwGetVoid(f->menu_button, MwNpixmap)) != NULL) {
+			MwLLDestroyPixmap(px);
+			px = NULL;
+		}
+
+		if((p = MDEIconLookUp(cat == NULL ? "Applications" : cat, name, 16)) != NULL) {
+			px = MwLoadImage(f->menu_button, p);
+
+			free(p);
+		}
+
+		MwSetVoid(f->menu_button, MwNpixmap, px);
+	}
+
+	pthread_mutex_unlock(&xmutex);
+
+	if(px != NULL) st = 1;
+
+	return st;
+}
+
+void wm_set_icon(MwWidget widget, unsigned char* data, int width, int height) {
+	wmframe_t* f  = widget->opaque;
+	MwLLPixmap px = NULL;
+
+	pthread_mutex_lock(&xmutex);
+	if(f->menu_button != NULL) {
+		if((px = MwGetVoid(f->menu_button, MwNpixmap)) != NULL) {
+			MwLLDestroyPixmap(px);
+			px = NULL;
+		}
+
+		px = MwLoadRaw(f->menu_button, data, width, height);
+
+		MwSetVoid(f->menu_button, MwNpixmap, px);
+	}
 	pthread_mutex_unlock(&xmutex);
 }
 

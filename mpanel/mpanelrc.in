@@ -23,6 +23,9 @@
 		<Launcher ID="2">
 			<Execute Icon="firefox">firefox</Execute>
 			<Execute Icon="terminal">uxterm</Execute>
+			<Execute Icon="gimp">gimp</Execute>
+			<Execute Icon="unknown">xmms</Execute>
+			<Execute Icon="mbiff">mbiff</Execute>
 		</Launcher>
 	
 		<Separator ID="3" />
