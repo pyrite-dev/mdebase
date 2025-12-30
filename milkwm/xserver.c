@@ -50,6 +50,7 @@ typedef struct window {
 	int	 working;
 } window_t;
 static window_t* windows = NULL;
+static Window*	 wnd	 = NULL;
 
 static void* old_handler;
 static int   error_happened = 0;
@@ -452,13 +453,23 @@ static int is_no_border(Window window) {
 	return 0;
 }
 
+static void bring_up(void) {
+	int i;
+	for(i = 0; i < arrlen(wnd); i++) {
+		XWindowAttributes xwa;
+
+		XGetWindowAttributes(xdisplay, wnd[i], &xwa);
+
+		if(xwa.override_redirect) XRaiseWindow(xdisplay, wnd[i]);
+	}
+}
+
 void loop_x(void) {
 	XEvent	     ev;
 	Window	     root, parent;
 	Window*	     children;
 	unsigned int nchildren;
 	int	     i;
-	Window*	     wnd = NULL;
 
 	begin_error();
 
@@ -509,6 +520,8 @@ void loop_x(void) {
 				XRaiseWindow(xdisplay, w);
 			}
 
+			bring_up();
+
 			XAllowEvents(xdisplay, ReplayPointer, CurrentTime);
 		} else if(ev.type == MotionNotify && ev.xmotion.subwindow != None) {
 			Window w = None, t = ev.xmotion.window;
@@ -520,7 +533,10 @@ void loop_x(void) {
 				}
 			}
 
-			if(w != None) XRaiseWindow(xdisplay, w);
+			if(w != None) {
+				XRaiseWindow(xdisplay, w);
+				bring_up();
+			}
 
 			XAllowEvents(xdisplay, ReplayPointer, CurrentTime);
 		} else if(ev.type == FocusIn && ev.xfocus.window != focus) {
@@ -628,7 +644,11 @@ void loop_x(void) {
 
 				XMapWindow(xdisplay, ev.xmaprequest.window);
 
-				if(xwa.override_redirect) save(ev.xmaprequest.window);
+				if(xwa.override_redirect) {
+					arrput(wnd, ev.xmaprequest.window);
+
+					save(ev.xmaprequest.window);
+				}
 				continue;
 			}
 
@@ -726,7 +746,16 @@ void loop_x(void) {
 			int		  i;
 			XWindowAttributes xwa;
 			if(!XGetWindowAttributes(xdisplay, ev.xmap.window, &xwa)) continue;
-			if(xwa.override_redirect) continue;
+			if(xwa.override_redirect) {
+				for(i = 0; i < arrlen(wnd); i++) {
+					if(wnd[i] == ev.xmap.window) {
+						break;
+					}
+				}
+
+				if(i == arrlen(wnd)) arrput(wnd, ev.xmap.window);
+				continue;
+			}
 
 			for(i = 0; i < arrlen(windows); i++) {
 				if(windows[i].client == ev.xmap.window) {
@@ -800,7 +829,7 @@ void loop_x(void) {
 				set_focus(w);
 			}
 		} else if(ev.type == ClientMessage) {
-			if(ev.xclient.message_type == milkwm_set_focus && ev.xclient.data.l[0] == milkwm_set_focus) {
+			if(ev.xclient.message_type == XInternAtom(xdisplay, "WM_PROTOCOLS", False) && ev.xclient.data.l[0] == milkwm_set_focus) {
 				set_focus(ev.xclient.data.l[1]);
 			}
 		}
@@ -819,14 +848,36 @@ void set_focus_x(MwWidget widget) {
 
 			ev.type			= ClientMessage;
 			ev.xclient.window	= nofocus;
-			ev.xclient.message_type = milkwm_set_focus;
+			ev.xclient.message_type = XInternAtom(xdisplay, "WM_PROTOCOLS", False);
 			ev.xclient.format	= 32;
-			ev.xclient.data.l[0]	= ev.xclient.message_type;
+			ev.xclient.data.l[0]	= milkwm_set_focus;
 			ev.xclient.data.l[1]	= windows[i].client;
 
 			XSendEvent(xdisplay, nofocus, False, 0, &ev);
 
 			XRaiseWindow(xdisplay, windows[i].frame->lowlevel->x11.window);
+			bring_up();
+
+			break;
+		}
+	}
+}
+
+void delete_x(MwWidget widget) {
+	int i;
+
+	for(i = 0; i < arrlen(windows); i++) {
+		if(windows[i].frame == widget) {
+			XEvent ev;
+
+			ev.type			= ClientMessage;
+			ev.xclient.window	= windows[i].client;
+			ev.xclient.message_type = XInternAtom(xdisplay, "WM_PROTOCOLS", False);
+			ev.xclient.format	= 32;
+			ev.xclient.data.l[0]	= XInternAtom(xdisplay, "WM_DELETE_WINDOW", False);
+			ev.xclient.data.l[1]	= CurrentTime;
+
+			XSendEvent(xdisplay, windows[i].client, False, 0, &ev);
 
 			break;
 		}

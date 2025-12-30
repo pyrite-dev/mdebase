@@ -32,6 +32,8 @@ typedef struct wmframe {
 	MwWidget submenu;
 
 	MwMenu menu;
+
+	long tick;
 } wmframe_t;
 
 void loop_wm(void) {
@@ -153,10 +155,18 @@ static void apply_config(MwWidget wnd) {
 static void maximize(MwWidget handle, void* user, void* client) {
 	wmframe_t* f = ((MwWidget)user)->opaque;
 	MwRect	   rc;
+	int	   i;
 
 	set_focus_x(user);
 
 	if(f->maximized) {
+		for(i = 0; i < arrlen(f->menu->sub); i++) {
+			if(strcmp(f->menu->sub[i]->name, "Restore") == 0) {
+				free(f->menu->sub[i]->name);
+				f->menu->sub[i]->name = MwStringDuplicate("Maximize");
+			}
+		}
+
 		f->maximized = 0;
 
 		MwVaApply(handle,
@@ -170,6 +180,13 @@ static void maximize(MwWidget handle, void* user, void* client) {
 			  MwNheight, f->old_size.height,
 			  NULL);
 	} else {
+		for(i = 0; i < arrlen(f->menu->sub); i++) {
+			if(strcmp(f->menu->sub[i]->name, "Maximize") == 0) {
+				free(f->menu->sub[i]->name);
+				f->menu->sub[i]->name = MwStringDuplicate("Restore");
+			}
+		}
+
 		f->maximized = 1;
 
 		f->old_point.x	   = MwGetInteger(user, MwNx);
@@ -196,6 +213,7 @@ static void spawn_menu(MwWidget handle, void* user, void* client) {
 	MwWidget   w = handle;
 	wmframe_t* f;
 	MwPoint	   p;
+	long	   t;
 
 	while(w != NULL && strcmp(MwGetName(w), "frame") != 0) w = MwGetParent(w);
 
@@ -207,21 +225,56 @@ static void spawn_menu(MwWidget handle, void* user, void* client) {
 		p.x = 0;
 		p.y = MwGetInteger(handle, MwNheight);
 		MwSubMenuAppear(f->submenu, f->menu, &p, 0);
+
+		MwVaApply(f->menu_button,
+			  MwNforceInverted, 1,
+			  NULL);
 	} else {
 		MwDestroyWidget(f->submenu);
 		f->submenu = NULL;
+
+		MwVaApply(f->menu_button,
+			  MwNforceInverted, 0,
+			  NULL);
 	}
+
+	if(((t = MwTimeGetTick()) - f->tick) < MwDoubleClickTimeout) {
+		delete_x(w);
+	}
+
+	f->tick = t;
 }
 
 static void menu_menu(MwWidget handle, void* user, void* client) {
 	MwWidget   w = handle;
 	wmframe_t* f;
+	int	   i;
+	MwMenu	   m = client;
 
 	while(w != NULL && strcmp(MwGetName(w), "frame") != 0) w = MwGetParent(w);
 
 	f = w->opaque;
 
+	if(strcmp(m->name, "Maximize") == 0 || strcmp(m->name, "Restore") == 0) {
+		for(i = 0; i < arrlen(f->left); i++) {
+			MwLLPixmap px = MwGetVoid(f->left[i], MwNpixmap);
+
+			if(px == f->maximize || px == f->restore) maximize(f->left[i], w, NULL);
+		}
+
+		for(i = 0; i < arrlen(f->right); i++) {
+			MwLLPixmap px = MwGetVoid(f->right[i], MwNpixmap);
+
+			if(px == f->maximize || px == f->restore) maximize(f->right[i], w, NULL);
+		}
+	} else if(strcmp(m->name, "Close") == 0) {
+		delete_x(w);
+	}
+
 	f->submenu = NULL;
+	MwVaApply(f->menu_button,
+		  MwNforceInverted, 0,
+		  NULL);
 }
 
 static void apply_button(MwWidget widget, const char* str) {
@@ -269,6 +322,10 @@ static void drag_down(MwWidget handle, void* user, void* client) {
 	if(f->submenu != NULL) {
 		MwDestroyWidget(f->submenu);
 		f->submenu = NULL;
+
+		MwVaApply(f->menu_button,
+			  MwNforceInverted, 0,
+			  NULL);
 	}
 
 	f->dragging	= 1;
@@ -422,6 +479,8 @@ MwWidget wm_frame(int w, int h) {
 	}
 	f->iconify = MwLoadRaw(wnd, icon, 6, 6);
 	free(icon);
+
+	f->tick = 0;
 
 	f->left	 = NULL;
 	f->right = NULL;

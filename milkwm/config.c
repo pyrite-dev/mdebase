@@ -11,7 +11,7 @@ static void read_config(const char* path) {
 	xemil_t* tmp;
 
 	if((tmp = xl_open_file(path)) == NULL || !xl_parse(tmp)) {
-		fprintf(stderr, "MPanel config error: file %s\n", path);
+		fprintf(stderr, "MilkWM config error: file %s\n", path);
 		if(tmp != NULL) xl_close(tmp);
 	} else {
 		if(wm_config != NULL) xl_close(wm_config);

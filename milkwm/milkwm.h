@@ -32,6 +32,7 @@ int  init_x(void);
 void loop_x(void);
 void set_focus_x(MwWidget widget);
 void set_background_x(void);
+void delete_x(MwWidget widget);
 
 /* wm.c */
 extern MwWidget root;
