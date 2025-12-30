@@ -458,6 +458,7 @@ void loop_x(void) {
 	Window*	     children;
 	unsigned int nchildren;
 	int	     i;
+	Window*	     wnd = NULL;
 
 	begin_error();
 
@@ -602,6 +603,13 @@ void loop_x(void) {
 					break;
 				}
 			}
+
+			for(i = 0; i < arrlen(wnd); i++) {
+				if(wnd[i] == ev.xdestroywindow.window) {
+					arrdel(wnd, i);
+					break;
+				}
+			}
 		} else if(ev.type == MapRequest) {
 			window_t	  w;
 			int		  i;
@@ -695,7 +703,13 @@ void loop_x(void) {
 			mx = (xwar.width - wm_entire_width(xwa.width));
 			my = (xwar.height - wm_entire_height(xwa.height) - 46);
 
-			XMoveWindow(xdisplay, w.client, mx == 0 ? 0 : (rand() % mx), my == 0 ? 0 : (rand() % my));
+			for(i = 0; i < arrlen(wnd); i++) {
+				if(wnd[i] == w.client) break;
+			}
+			if(i == arrlen(wnd)) {
+				XMoveWindow(xdisplay, w.client, mx == 0 ? 0 : (rand() % mx), my == 0 ? 0 : (rand() % my));
+				arrput(wnd, w.client);
+			}
 		} else if(ev.type == PropertyNotify) {
 			int i;
 			for(i = 0; i < arrlen(windows); i++) {
@@ -792,6 +806,8 @@ void loop_x(void) {
 		}
 	}
 	end_error();
+
+	arrfree(wnd);
 }
 
 void set_focus_x(MwWidget widget) {
