@@ -28,6 +28,10 @@ typedef struct wmframe {
 	int	maximized;
 	MwRect	old_size;
 	MwPoint old_point;
+
+	MwWidget submenu;
+
+	MwMenu menu;
 } wmframe_t;
 
 void loop_wm(void) {
@@ -188,6 +192,38 @@ static void maximize(MwWidget handle, void* user, void* client) {
 	}
 }
 
+static void spawn_menu(MwWidget handle, void* user, void* client) {
+	MwWidget   w = handle;
+	wmframe_t* f;
+	MwPoint	   p;
+
+	while(w != NULL && strcmp(MwGetName(w), "frame") != 0) w = MwGetParent(w);
+
+	f = w->opaque;
+
+	if(f->submenu == NULL) {
+		f->submenu = MwCreateWidget(MwSubMenuClass, "submenu", handle, 0, MwGetInteger(handle, MwNheight), 0, 0);
+
+		p.x = 0;
+		p.y = MwGetInteger(handle, MwNheight);
+		MwSubMenuAppear(f->submenu, f->menu, &p, 0);
+	} else {
+		MwDestroyWidget(f->submenu);
+		f->submenu = NULL;
+	}
+}
+
+static void menu_menu(MwWidget handle, void* user, void* client) {
+	MwWidget   w = handle;
+	wmframe_t* f;
+
+	while(w != NULL && strcmp(MwGetName(w), "frame") != 0) w = MwGetParent(w);
+
+	f = w->opaque;
+
+	f->submenu = NULL;
+}
+
 static void apply_button(MwWidget widget, const char* str) {
 	MwWidget   w = widget;
 	wmframe_t* f;
@@ -204,6 +240,8 @@ static void apply_button(MwWidget widget, const char* str) {
 		px = f->iconify;
 	} else if(strcmp(str, "Menu") == 0) {
 		f->menu_button = widget;
+		MwAddUserHandler(widget, MwNactivateHandler, spawn_menu, w);
+		MwAddUserHandler(widget, MwNmenuHandler, menu_menu, w);
 	}
 
 	if(px != NULL) {
@@ -227,6 +265,11 @@ static void drag_down(MwWidget handle, void* user, void* client) {
 	f = w->opaque;
 
 	MwGetCursorCoord(w, &c);
+
+	if(f->submenu != NULL) {
+		MwDestroyWidget(f->submenu);
+		f->submenu = NULL;
+	}
 
 	f->dragging	= 1;
 	f->drag_point.x = c.x - x;
@@ -310,6 +353,13 @@ MwWidget wm_frame(int w, int h) {
 	wmframe_t*     f = malloc(sizeof(*f));
 	unsigned char* icon;
 	int	       y, x;
+	MwMenu	       m;
+	const char*    menus[] = {
+	       "Maximize",
+	       "Iconify",
+	       "----",
+	       "Close",
+	       NULL};
 
 	pthread_mutex_lock(&xmutex);
 
@@ -324,6 +374,25 @@ MwWidget wm_frame(int w, int h) {
 	f->background = NULL;
 	f->maximized  = 0;
 	f->dragging   = 0;
+
+	f->submenu = NULL;
+
+	f->menu		= malloc(sizeof(*f->menu));
+	f->menu->name	= NULL;
+	f->menu->keep	= 0;
+	f->menu->wsub	= NULL;
+	f->menu->sub	= NULL;
+	f->menu->opaque = NULL;
+
+	for(i = 0; menus[i] != NULL; i++) {
+		m	  = malloc(sizeof(*m));
+		m->name	  = MwStringDuplicate(menus[i]);
+		m->keep	  = 0;
+		m->wsub	  = NULL;
+		m->sub	  = NULL;
+		m->opaque = NULL;
+		arrput(f->menu->sub, m);
+	}
 
 	f->menu_button = NULL;
 
