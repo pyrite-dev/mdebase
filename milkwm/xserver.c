@@ -541,8 +541,6 @@ void loop_x(void) {
 			XAllowEvents(xdisplay, ReplayPointer, CurrentTime);
 		} else if(ev.type == FocusIn && ev.xfocus.window != focus) {
 			set_focus(focus);
-		} else if(ev.type == FocusOut && focus != None) {
-			set_focus(focus);
 		} else if(ev.type == ConfigureRequest) {
 			XWindowChanges xwc;
 			int	       i;
@@ -663,6 +661,9 @@ void loop_x(void) {
 			if(ret) continue;
 			if(i != arrlen(windows)) {
 				XWindowAttributes xwa;
+				int rev;
+				Window cfocus;
+
 				if(!XGetWindowAttributes(xdisplay, windows[i].client, &xwa)) {
 					wm_destroy(windows[i].frame);
 					arrdel(windows, i);
@@ -699,6 +700,7 @@ void loop_x(void) {
 				}
 				XUngrabServer(xdisplay);
 				XMapWindow(xdisplay, windows[i].client);
+
 				set_focus(windows[i].client);
 
 				continue;
