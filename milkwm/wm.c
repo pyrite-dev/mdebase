@@ -63,7 +63,6 @@ void loop_wm(void) {
 		while(MwPending(root)) {
 			if((s = MwStep(root)) != 0) break;
 		}
-		MwAfterStep(root);
 		pthread_mutex_unlock(&xmutex);
 		if(s != 0) break;
 
