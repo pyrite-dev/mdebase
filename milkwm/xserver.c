@@ -661,8 +661,8 @@ void loop_x(void) {
 			if(ret) continue;
 			if(i != arrlen(windows)) {
 				XWindowAttributes xwa;
-				int rev;
-				Window cfocus;
+				int		  rev;
+				Window		  cfocus;
 
 				if(!XGetWindowAttributes(xdisplay, windows[i].client, &xwa)) {
 					wm_destroy(windows[i].frame);

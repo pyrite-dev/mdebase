@@ -9,6 +9,8 @@ void rehash(int sig) {
 int main() {
 	int st;
 
+	MwLibraryInit();
+
 	wm_config_init();
 	wm_config_read();
 

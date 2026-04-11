@@ -17,6 +17,8 @@ char*	   name_line	      = NULL;
 char*	   try_exec_line      = NULL;
 char*	   exec_line	      = NULL;
 char*	   desktop_names_line = NULL;
+int	   session_count      = 0;
+int	   mde_count	      = -1;
 
 static void add_user(const char* name, void* user) {
 	MwComboBoxAdd(user, -1, name);
@@ -59,6 +61,11 @@ static void add_session(session_type_t session_type, const char* path, int dir, 
 
 		if(i == shlen(sessions)) {
 			MwComboBoxAdd(user, -1, name_line);
+
+			if(strcmp(name_line, "MDE") == 0) {
+				mde_count = session_count;
+			}
+			session_count++;
 
 			value->run	     = exec_line;
 			value->try_run	     = try_exec_line;
@@ -199,11 +206,11 @@ void login_window(void) {
 	pic	  = MwVaCreateWidget(MwImageClass, "image", window, 10, 10, 80, 137,
 				     MwNhasBorder, 1,
 				     NULL);
-	userlabel = MwVaCreateWidget(MwLabelClass, "userlabel", window, 95, 10, MwTextWidth(window, "User:"), 16,
+	userlabel = MwVaCreateWidget(MwLabelClass, "userlabel", window, 95, 10, MwTextWidth(window, NULL, "User:"), 16,
 				     MwNtext, "User:",
 				     NULL);
 	usercombo = MwCreateWidget(MwComboBoxClass, "usercombo", window, 95, 10 + 16 + 5, 265, 18);
-	passlabel = MwVaCreateWidget(MwLabelClass, "passlabel", window, 95, 10 + 16 + 5 + 18 + 5, MwTextWidth(window, "Password:"), 16,
+	passlabel = MwVaCreateWidget(MwLabelClass, "passlabel", window, 95, 10 + 16 + 5 + 18 + 5, MwTextWidth(window, NULL, "Password:"), 16,
 				     MwNtext, "Password:",
 				     NULL);
 	passentry = MwVaCreateWidget(MwEntryClass, "passentry", window, 95, 10 + 16 + 5 + 18 + 5 + 16 + 5, 265, 18,
@@ -212,7 +219,7 @@ void login_window(void) {
 	mainsep	  = MwVaCreateWidget(MwSeparatorClass, "mainsep", window, 95, 10 + 16 + 5 + 18 + 5 + 16 + 5 + 18, 265, 10,
 				     MwNorientation, MwHORIZONTAL,
 				     NULL);
-	sesslabel = MwVaCreateWidget(MwLabelClass, "sesslabel", window, 95, 10 + 16 + 5 + 18 + 5 + 16 + 5 + 18 + 10, MwTextWidth(window, "Session Type:"), 16,
+	sesslabel = MwVaCreateWidget(MwLabelClass, "sesslabel", window, 95, 10 + 16 + 5 + 18 + 5 + 16 + 5 + 18 + 10, MwTextWidth(window, NULL, "Session Type:"), 16,
 				     MwNtext, "Session Type:",
 				     NULL);
 	sesscombo = MwCreateWidget(MwComboBoxClass, "sesscombo", window, 95, 10 + 16 + 5 + 18 + 5 + 16 + 5 + 18 + 10 + 16 + 5, 265, 18);
@@ -243,10 +250,20 @@ void login_window(void) {
 	shfree(sessions);
 	sh_new_strdup(sessions);
 	shdefault(sessions, NULL);
+
+	mde_count     = -1;
+	session_count = 0;
+
 	MDEDirectoryScan(DATAROOTDIR "/xsessions", add_session_x, sesscombo);
 	MDEDirectoryScan("/usr/share/xsessions", add_session_x, sesscombo);
 	MDEDirectoryScan(DATAROOTDIR "/wayland-sessions", add_session_wayland, sesscombo);
 	MDEDirectoryScan("/usr/share/wayland-sessions", add_session_wayland, sesscombo);
+
+	if(mde_count != -1) {
+		MwVaApply(sesscombo,
+			  MwNvalue, mde_count,
+			  NULL);
+	}
 
 	pthread_mutex_unlock(&xmutex);
 

@@ -41,8 +41,6 @@ void loop_wm(void) {
 
 	pthread_mutex_lock(&xmutex);
 
-	MwLibraryInit();
-
 	root = MwVaCreateWidget(NULL, "root", NULL, 0, 0, 0, 0,
 				COMMON_LOOK,
 				NULL);

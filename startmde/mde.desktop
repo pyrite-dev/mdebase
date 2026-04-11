@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=MDE
+Comment=Milk Desktop Experience
+Exec=startmde
+Type=Application
+Keywords=desktop
