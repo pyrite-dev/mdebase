@@ -20,11 +20,11 @@ restart_all () {
 }
 
 start_all () {
-	"@CMAKE_INSTALL_FULL_BINDIR@/mpanel" &
-	PANEL="$!"
-
 	"@CMAKE_INSTALL_FULL_BINDIR@/milkwm" &
 	WM="$!"
+
+	"@CMAKE_INSTALL_FULL_BINDIR@/mpanel" &
+	PANEL="$!"
 }
 
 trap "stop_all" INT
